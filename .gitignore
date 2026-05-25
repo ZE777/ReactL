@@ -1,0 +1,60 @@
+# ===== IDE & Editor =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Claude Code (本機個人設定，agent 定義可推) =====
+.claude/settings.local.json
+
+# ===== Office / Temp Files =====
+~$*
+*.tmp
+*.bak
+*.log
+
+# ===== .NET (未來後端用) =====
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+.vs/
+publish/
+TestResults/
+*.coverage
+*.coveragexml
+
+# ===== Node / Frontend (未來前端用) =====
+node_modules/
+.pnp
+.pnp.js
+coverage/
+
+# Next.js
+.next/
+out/
+
+# Vite
+dist/
+dist-ssr/
+*.local
+
+# ===== Env / Secrets =====
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.local.json
+secrets.json
+
+# 允許 example 範本
+!.env.example
+!.env.sample
