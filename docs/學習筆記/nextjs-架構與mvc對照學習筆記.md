@@ -865,3 +865,646 @@ src/
 > **一句話總結整份筆記：**
 >
 > Next.js 不是「React 的工具」，它是**取代 ASP.NET Core MVC 的全棧框架**。TS 是它的語言（對應 C#），Node.js 是它的 Runtime（對應 .NET CLR），React 是它的 UI 引擎（對應 Razor）。它**完全可以對應 MVC 三層**，但又多了 Server/Client 邊界劃分這個 MVC 沒有的維度，這既是它的學習曲線，也是它真正的價值所在。
+
+---
+
+# Part 7：App Router 五大檔案約定（Stage 5-B，Item 3）
+
+> 對應進度表：5-B 項目 3「Next.js App Router 基礎：page.tsx、layout.tsx、loading.tsx、error.tsx」
+> ⚠️ 本 Part 的所有內容為 **Next.js App Router（SSR）專屬**，不適用於 Vite + React（CSR）專案。
+
+### 框架對照：這套慣例只在 Next.js 存在
+
+| 需求 | Next.js App Router（SSR）| Vite + React（CSR）|
+|------|--------------------------|-------------------|
+| 定義頁面 | 建 `app/dashboard/page.tsx` 檔案即完成 | 在 `App.tsx` 寫 `<Route path="/dashboard" element={...}>` |
+| 共用 Layout | `app/dashboard/layout.tsx` | `<Outlet>` + wrapper component |
+| Loading 狀態 | `app/dashboard/loading.tsx` 自動套 Suspense | 手動在元件內寫 `if (isLoading) return <Skeleton />` |
+| 錯誤處理 | `app/dashboard/error.tsx` 自動套 ErrorBoundary | 手動包 `<ErrorBoundary>` 或 react-error-boundary |
+
+**Project C 的分工**：`prompt-studio-web`（前台）用 Next.js，適用本 Part。`prompt-studio-admin`（後台）用 Vite，路由在 `App.tsx` 用 React Router 宣告，本 Part 不適用。
+
+## 14. 五個特殊檔案的職責
+
+Next.js App Router 用**檔名本身**宣告職責，不需要任何 Attribute 或 config。
+
+| 檔名 | 自動作用 | .NET Razor 對照 |
+|------|---------|----------------|
+| `page.tsx` | 頁面本體，對應 URL | `Index.cshtml` |
+| `layout.tsx` | 包住同層與子路由，**不因導航重新掛載** | `_Layout.cshtml` |
+| `loading.tsx` | 自動把 `page.tsx` 包入 `<Suspense>` | （無原生對應） |
+| `error.tsx` | 自動把 `page.tsx` 包入 `<ErrorBoundary>` | `_Error.cshtml` |
+| `not-found.tsx` | 呼叫 `notFound()` 時顯示 | `404.cshtml` |
+
+### 巢狀 Layout 的關鍵行為
+
+```
+app/
+  layout.tsx          ← 根 Layout，包住所有頁面（<html><body>）
+  page.tsx            ← /
+  dashboard/
+    layout.tsx        ← Dashboard Layout，只包住 /dashboard/*
+    page.tsx          ← /dashboard
+    settings/
+      page.tsx        ← /dashboard/settings
+```
+
+- 從 `/dashboard` 導向 `/dashboard/settings` 時，**`dashboard/layout.tsx` 不重新掛載**（狀態保留）。
+- 這是 Next.js 與 React Router 的重大差異：React Router 的 `<Outlet>` 每次都完整 re-render 外殼。
+
+### loading.tsx 的真實展開
+
+```tsx
+// 你寫的：
+// dashboard/loading.tsx
+export default function Loading() {
+  return <div className="skeleton" />;
+}
+
+// Next.js 自動等效為：
+// dashboard/layout.tsx（概念上）
+import { Suspense } from 'react';
+import Loading from './loading';
+import Page from './page';
+
+<Suspense fallback={<Loading />}>
+  <Page />
+</Suspense>
+```
+
+### error.tsx 的重要限制
+
+- **必須加 `'use client'`**，因為它要用 `useEffect` 記錄 error 並提供 retry 按鈕。
+- 它補捉的是**子樹的 render 錯誤**，不會捉 layout.tsx 自身的錯誤。
+- 提供 `reset()` 函式讓使用者重試：
+
+```tsx
+'use client';
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
+  return (
+    <div>
+      <p>發生錯誤：{error.message}</p>
+      <button onClick={reset}>重試</button>
+    </div>
+  );
+}
+```
+
+### not-found.tsx 的觸發方式
+
+```tsx
+// page.tsx（Server Component）
+import { notFound } from 'next/navigation';
+
+async function OrderPage({ params }: { params: { id: string } }) {
+  const order = await getOrder(params.id);
+  if (!order) notFound();       // ← 觸發最近的 not-found.tsx
+  return <OrderDetail order={order} />;
+}
+```
+
+---
+
+# Part 8：Server / Client 序列化限制（Stage 5-B，Item 4）
+
+> 對應進度表：5-B 項目 4「Server Components vs Client Components：'use client' 邊界與序列化限制」
+
+## 15. 什麼能跨越 Server → Client 邊界
+
+### 核心規則
+
+Server Component 把資料當 Props 傳給 Client Component 時，資料必須能被 JSON 序列化。
+
+| 可以傳 ✅ | 不能傳 ❌ |
+|---------|---------|
+| `string`, `number`, `boolean`, `null` | 函式（callbacks、event handlers） |
+| Plain Object `{}` | Class 實例（`new Foo()`） |
+| Array | `Date` 物件（要先 `.toISOString()` 轉字串） |
+| React elements（JSX） | `Map`, `Set` |
+| `undefined`（Props 可省略） | `Symbol` |
+| | Promise（要用特定方式傳） |
+
+### 常見錯誤
+
+```tsx
+// ❌ 錯誤：把函式當 Props 傳給 Client Component
+// ServerPage.tsx（Server Component）
+import { ClientButton } from './ClientButton';
+
+export default function Page() {
+  const handleClick = () => console.log('clicked'); // ← 函式不可序列化
+  return <ClientButton onClick={handleClick} />;     // ← 報錯
+}
+
+// ✅ 正確：event handler 定義在 Client Component 內部
+// ClientButton.tsx
+'use client';
+export function ClientButton() {
+  const handleClick = () => console.log('clicked'); // ← 函式在 client 側定義
+  return <button onClick={handleClick}>Click</button>;
+}
+```
+
+### `'use client'` 是邊界聲明，不是元件標記
+
+`'use client'` 的意思是：**「從這個模組開始，以下的東西都在 Client 側執行」**。
+
+- 同一個元件檔的**所有 import** 也會被拉進 client bundle。
+- Server Component **可以 import Client Component**（Server 當容器，Client 當互動層）。
+- Client Component **不能 import Server Component**（違反邊界方向）。
+
+```tsx
+// ✅ 合法：Server import Client
+// ServerPage.tsx
+import { SearchBox } from './SearchBox'; // 'use client' 元件
+export default function Page() {
+  return <div><SearchBox /></div>; // OK
+}
+
+// ❌ 非法：Client import Server
+// SearchBox.tsx
+'use client';
+import { DataTable } from './DataTable'; // Server Component ← 報錯
+```
+
+---
+
+# Part 9：RSC 資料抓取模式（Stage 5-B，Item 5）
+
+> 對應進度表：5-B 項目 5「告別 useEffect + useState，Server Component 直接 await fetch」
+
+## 16. 新舊寫法對照
+
+### 舊寫法（CSR，Client Component）
+
+```tsx
+'use client';
+
+function UserList() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/users')
+      .then(r => r.json())
+      .then(data => {
+        setUsers(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <Skeleton />;
+  return <ul>{users.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+```
+
+痛點：3 個 state、useEffect 競態競爭風險、白畫面閃爍。
+
+### 新寫法（RSC，Server Component）
+
+```tsx
+// 不需要 'use client'
+async function UserList() {
+  const users = await fetch('/api/users').then(r => r.json());
+  return <ul>{users.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+```
+
+零 state、零 effect、無競態風險，HTML 到瀏覽器時資料已在其中。
+
+### Next.js 擴充的 fetch 選項
+
+Next.js 對原生 fetch 加了快取選項（Node.js 原生 fetch 沒有這些）：
+
+```tsx
+// 完全快取（類似 SSG，build 時抓一次）
+const data = await fetch('/api/config', { cache: 'force-cache' });
+
+// 不快取（每次 request 都抓，類似傳統 SSR）
+const data = await fetch('/api/orders', { cache: 'no-store' });
+
+// 定時重驗證（類似 ISR，N 秒後視為 stale 重抓）
+const data = await fetch('/api/stats', { next: { revalidate: 3600 } });
+```
+
+| 選項 | 行為 | .NET 對照 |
+|------|------|----------|
+| `force-cache` | Build 時快取，不再重抓 | 靜態資源 / OutputCache 永久 |
+| `no-store` | 每次 request 都 fetch | 無快取的 API 呼叫 |
+| `revalidate: N` | N 秒後 stale，背景重抓 | OutputCache 含 `Duration=N` |
+
+### 平行抓取（避免瀑布式）
+
+```tsx
+async function DashboardPage() {
+  // ❌ 瀑布式：users 抓完才抓 orders，總時間疊加
+  const users = await fetchUsers();
+  const orders = await fetchOrders();
+
+  // ✅ 平行：同時發出兩個 request，總時間 = 最慢那個
+  const [users, orders] = await Promise.all([fetchUsers(), fetchOrders()]);
+
+  return <Dashboard users={users} orders={orders} />;
+}
+```
+
+---
+
+# Part 10：Streaming + Suspense（Stage 5-B，Item 6）
+
+> 對應進度表：5-B 項目 6「Streaming + Suspense：RSC payload 漸進送達」
+
+## 17. 傳統 SSR 的問題與 Streaming 的解法
+
+### 傳統 SSR 的瓶頸
+
+```text
+傳統 SSR（全部等最慢的資料）：
+
+T=0ms   Browser 請求
+T=200ms Server 開始抓資料
+        ├─ 使用者資料    50ms  ✅
+        ├─ 訂單列表    200ms  ✅
+        └─ 推薦商品    2000ms ← 最慢，其他人等它
+T=2200ms 全部抓完，Server 才開始渲染 HTML
+T=2300ms Browser 才收到任何 HTML
+```
+
+### Streaming 解法
+
+```text
+Streaming SSR：
+
+T=0ms   Browser 請求
+T=100ms Server 送出 HTML 骨架（立刻）
+T=300ms 使用者資料好了 → 串流送出這部分 HTML
+T=450ms 訂單列表好了 → 串流送出這部分 HTML
+T=2100ms 推薦商品好了 → 串流送出這部分 HTML
+```
+
+Browser 在 T=100ms 就能顯示骨架，使用者不再對著空白頁等 2 秒。
+
+### 手動 Suspense 邊界
+
+```tsx
+import { Suspense } from 'react';
+
+async function StorePage() {
+  return (
+    <div>
+      <h1>商店</h1>                          {/* 立刻顯示 */}
+
+      <Suspense fallback={<CartSkeleton />}>
+        <CartSummary />                        {/* 快，50ms */}
+      </Suspense>
+
+      <Suspense fallback={<ProductSkeleton />}>
+        <RecommendedProducts />                {/* 慢，2000ms */}
+      </Suspense>
+    </div>
+  );
+}
+
+// 這個元件是 Server Component，內部 await 慢 API
+async function RecommendedProducts() {
+  const products = await fetchRecommendations(); // 2000ms
+  return <ProductGrid products={products} />;
+}
+```
+
+`<CartSummary>` 完成時就先顯示，不用等 `<RecommendedProducts>`。
+
+### loading.tsx 等同於自動 Suspense
+
+```
+app/dashboard/
+  loading.tsx   ← fallback
+  page.tsx      ← 被包住的 async Server Component
+```
+
+Next.js 自動展開為：
+```tsx
+<Suspense fallback={<Loading />}>
+  <DashboardPage />
+</Suspense>
+```
+
+### 什麼時候手動 Suspense，什麼時候用 loading.tsx
+
+| 場景 | 用哪個 |
+|------|--------|
+| 整個頁面載入中顯示骨架 | `loading.tsx`（自動，一行不用寫） |
+| 頁面內特定區塊慢，其他區塊先顯示 | 手動 `<Suspense>` 邊界 |
+| 跨多個路由共用同一個骨架 | 上層 `layout.tsx` 旁的 `loading.tsx` |
+
+---
+
+# Part 11：Server Actions + useFormState / useFormStatus（Stage 5-B，Item 7）
+
+> 對應進度表：5-B 項目 7「Server Actions、useFormState / useFormStatus」
+
+## 18. Server Actions 的完整寫法
+
+Part 9 章節已介紹過基礎，這裡補完整合表單的寫法。
+
+### 三種呼叫方式
+
+```tsx
+'use server';
+// actions.ts
+export async function createPersona(formData: FormData) {
+  const name = formData.get('name') as string;
+  await db.personas.create({ name });
+  revalidatePath('/personas'); // 讓快取失效，下次請求重抓
+}
+```
+
+```tsx
+// 方式 1：原生 <form action>（無 JS 也能運作，漸進增強）
+<form action={createPersona}>
+  <input name="name" />
+  <button type="submit">建立</button>
+</form>
+
+// 方式 2：JS 直接呼叫（Client Component 內）
+'use client';
+const handleClick = async () => {
+  await createPersona(new FormData());
+};
+
+// 方式 3：useFormState 包裝（有回傳值需求時）
+'use client';
+import { useFormState } from 'react-dom';
+const [state, formAction] = useFormState(createPersona, null);
+<form action={formAction}>...</form>
+```
+
+### useFormStatus — 讀取 Submit 的 pending 狀態
+
+```tsx
+// SubmitButton.tsx（必須是 <form> 的子元件才能讀到 pending）
+'use client';
+import { useFormStatus } from 'react-dom';
+
+export function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending}>
+      {pending ? '送出中...' : '送出'}
+    </button>
+  );
+}
+
+// PersonaForm.tsx
+<form action={createPersona}>
+  <input name="name" />
+  <SubmitButton />    {/* ← 子元件才讀得到 pending */}
+</form>
+```
+
+> **為何要拆子元件？** `useFormStatus` 讀取的是**最近的祖先 `<form>`** 的狀態，必須在 `<form>` 內部的元件才能用，不能在同一層。
+
+### useFormState — 接收 Action 回傳值
+
+```tsx
+// actions.ts
+'use server';
+export async function createPersona(prevState: any, formData: FormData) {
+  const name = formData.get('name') as string;
+  if (!name) return { error: '名稱不能空白' }; // ← 回傳值
+  await db.personas.create({ name });
+  return { success: true };
+}
+
+// PersonaForm.tsx
+'use client';
+import { useFormState } from 'react-dom';
+import { createPersona } from './actions';
+
+export function PersonaForm() {
+  const [state, formAction] = useFormState(createPersona, null);
+  //     ↑ state = action 的回傳值（初始 null）
+  //            ↑ formAction = 包裝後的 action，用於 <form action>
+
+  return (
+    <form action={formAction}>
+      {state?.error && <p className="text-red-500">{state.error}</p>}
+      {state?.success && <p className="text-green-500">建立成功！</p>}
+      <input name="name" />
+      <SubmitButton />
+    </form>
+  );
+}
+```
+
+> React 19 把 `useFormState` 改名為 `useActionState`（從 `react` import，不再從 `react-dom`）。目前 Next.js 14/15 仍用 `react-dom` 版本，兩者概念相同。
+
+---
+
+# Part 12：RSC 決策樹 + Client Boundary 陷阱（Stage 5-B，Item 8）
+
+> 對應進度表：5-B 項目 8「RSC 決策樹：何時選 Server / Client、陷阱、children 透傳模式」
+
+## 19. RSC 決策樹
+
+```
+這個元件需要：
+
+1. useState / useReducer / useContext？
+   → 'use client'
+
+2. useEffect / useCallback / useMemo（依賴瀏覽器時序）？
+   → 'use client'
+
+3. onClick / onChange 等事件監聽？
+   → 'use client'
+
+4. window / document / localStorage 等 Browser API？
+   → 'use client'
+
+5. 以上都不需要（純展示、需要直接 await 資料）？
+   → Server Component（不加任何標記，預設）
+```
+
+### 常見誤解：「互動的元件才需要 'use client'」
+
+更精確的說法是：**「需要瀏覽器環境的元件才需要 'use client'」**。
+
+一個只有 `onClick` 的按鈕需要 `'use client'`。但一個資料展示卡片，即使視覺上很複雜，只要沒有 Hook 和事件，就應該是 Server Component。
+
+## 20. Client Boundary 陷阱
+
+### 陷阱 1：把 Layout 整個標成 'use client'
+
+```tsx
+// ❌ 錯誤：整個 AdminLayout 都變 client，連帶的子路由都進 bundle
+'use client';
+export default function AdminLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  return (
+    <div>
+      <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen(v => !v)} />
+      {children}
+    </div>
+  );
+}
+```
+
+問題：`children`（子頁面）原本可以是 Server Component，但因為 Layout 標了 `'use client'`，整棵子樹都被拉進 client bundle，資料抓取都變成 CSR。
+
+### 陷阱 1 的正確做法：抽出互動部分
+
+```tsx
+// ✅ 正確：只把 Sidebar 抽成 Client Component
+
+// Sidebar.tsx
+'use client';
+export function Sidebar() {
+  const [open, setOpen] = useState(false);
+  return <aside>...</aside>;
+}
+
+// AdminLayout.tsx（Server Component，不加 'use client'）
+import { Sidebar } from './Sidebar';
+export default function AdminLayout({ children }) {
+  return (
+    <div>
+      <Sidebar />    {/* Client Component，只有它進 bundle */}
+      {children}     {/* 子頁面維持 Server Component 能力 */}
+    </div>
+  );
+}
+```
+
+### 陷阱 2：在 Client Component 中 import Server Component
+
+```tsx
+// ❌ 非法：Client 不能 import Server
+'use client';
+import { DataTable } from './DataTable'; // DataTable 是 Server Component
+```
+
+Next.js 會報錯或把 DataTable 降格為 Client Component。
+
+## 21. children 透傳模式（Client Boundary 穿透）
+
+這是最重要的模式，解決「需要 Context Provider 但不想讓子元件都變 Client」的問題。
+
+```tsx
+// ThemeProvider.tsx — Client Component（必須，因為用到 useState）
+'use client';
+import { ThemeContext } from './ThemeContext';
+import { useState } from 'react';
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setTheme] = useState('light');
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}   {/* ← children 的 Server/Client 身份由它的定義決定，不受這裡影響 */}
+    </ThemeContext.Provider>
+  );
+}
+
+// layout.tsx — Server Component
+import { ThemeProvider } from './ThemeProvider';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <ThemeProvider>
+          {children}    {/* ← 這裡的 children（各頁面）仍然是 Server Component */}
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+**為什麼 children 能穿透？**
+
+`children` 是從 Server Component（`layout.tsx`）傳入的，它的身份在**被定義的地方**決定，不是在被使用的地方決定。`ThemeProvider` 把 `children` 當成不透明的 slot 輸出，不改變它的渲染位置。
+
+| 元件 | 渲染位置 |
+|------|---------|
+| `ThemeProvider` | Client（有 useState） |
+| `children`（各頁面） | Server（由 layout.tsx 傳入） |
+| `useContext(ThemeContext)` 的子元件 | Client（因為要讀 Context） |
+
+---
+
+# Part 13：雙軌路由架構（Stage 5-C，Item 9）
+
+> 對應進度表：5-C 項目 9「雙軌路由架構（Next SSR + Vite CSR 分工）」
+
+## 22. 為什麼需要雙軌
+
+單一框架的限制：
+
+| 需求 | Next.js 優劣 | Vite + React 優劣 |
+|------|-------------|-----------------|
+| 對外網站 SEO | ✅ SSR 天然支援 | ❌ CSR 爬蟲看空殼 |
+| 後台管理系統 | 🔶 SSR 多餘，部署複雜 | ✅ SPA 輕量，靜態部署 |
+| 開發速度 | 🔶 App Router 學習曲線 | ✅ 快速起步 |
+| 部署成本 | 🔶 需 Node server | ✅ 靜態檔案 IIS/CDN |
+
+**結論**：兩個應用目標不同，用不同工具各自最佳化。
+
+## 23. Project C 的雙軌架構
+
+```
+monorepo/
+├── prompt-studio-web/      ← Next.js（對外前台，SSR + SEO）
+│   └── app/
+│       ├── page.tsx        ← 首頁（公開展示）
+│       └── share/[id]/     ← 分享頁（公開 Prompt 展示）
+│
+├── prompt-studio-admin/    ← Vite + React（後台管理，CSR SPA）
+│   └── src/
+│       ├── App.tsx
+│       └── features/
+│
+└── ReactL.api/             ← .NET API（前後台共用同一個後端）
+```
+
+### 部署分工
+
+```
+使用者 / 瀏覽器
+    │
+    ├─ https://promptstudio.com/          → Next.js (Node server, PM2)
+    │                                        port 3000
+    │
+    ├─ https://admin.promptstudio.com/    → Vite build 靜態檔
+    │                                        IIS / Nginx
+    │
+    └─ https://api.promptstudio.com/      → .NET API
+                                             IIS + Kestrel
+                                             port 5000
+```
+
+### 共用的東西
+
+| 共用什麼 | 做法 |
+|---------|------|
+| 後端 API | 同一份 .NET API，兩個前端都打 `/api/*` |
+| TypeScript 型別 | `packages/shared-types/`（monorepo shared package） |
+| 設計系統元件 | `packages/ui/`（可選，前期直接複製也行） |
+| 環境變數命名 | 統一前綴，前台用 `NEXT_PUBLIC_`，後台用 `VITE_` |
+
+### 路由職責分界
+
+| 路由 | 誰負責 | 理由 |
+|------|--------|------|
+| `/` 首頁 | Next.js | SSR，SEO |
+| `/share/[id]` 分享頁 | Next.js | SSR，OG 圖像、爬蟲 |
+| `/login`（管理者登入）| Vite | 不需 SEO，SPA |
+| `/personas`, `/prompts` | Vite | 後台，不需 SEO |
+| `/chat` | Vite | 高度互動，不適合 SSR |

@@ -651,4 +651,91 @@ Tailwind 強大不在於「能寫什麼」，而在於「不能寫什麼」—�
 
 ---
 
+## 附錄：Tailwind v4 Plugin 管理與 @tailwindcss/typography
+
+> 以下內容來自 AI Prompt Studio 專案實作，記錄 v4 與 v3 在 plugin 設定上的差異。
+
+### Tailwind v4 的 @plugin 語法
+
+Tailwind v4 **移除了 `tailwind.config.js` 的 `plugins[]` 陣列**，改在 CSS 進入點直接宣告：
+
+```css
+/* index.css（v4 寫法）*/
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+```
+
+v3 的舊寫法（放在這裡只作對照，v4 專案不可用）：
+```js
+// tailwind.config.js（v3）
+module.exports = {
+  plugins: [require('@tailwindcss/typography')]
+}
+```
+
+### @tailwindcss/typography：prose class 是什麼
+
+`@tailwindcss/typography` 這個套件提供 `prose` 系列 class，專門用來讓**後端吐出的或使用者撰寫的長文 HTML** 有漂亮的排版。
+
+沒有 prose 的問題：Tailwind 的 Preflight（CSS Reset）把所有 `<h1>`、`<p>`、`<ul>` 的預設樣式清空，這讓元件自己排版很方便，但對於 Markdown 渲染後的 HTML 就會一片平整、沒有視覺層次。
+
+```tsx
+// 有 prose：<h1> 大字、<p> 間距、<strong> 粗體、<code> 底色
+<div className="prose prose-sm dark:prose-invert max-w-none">
+  <ReactMarkdown>{content}</ReactMarkdown>
+</div>
+
+// 沒有 prose：所有標籤被 Preflight 重設，看起來像純文字
+<div>
+  <ReactMarkdown>{content}</ReactMarkdown>
+</div>
+```
+
+### 常用 prose 修飾符
+
+| Class | 效果 |
+|---|---|
+| `prose` | 基礎排版（行高、間距、字體）|
+| `prose-sm` | 縮小版，適合 chat bubble、側欄 |
+| `prose-lg` | 放大版，適合文章主體 |
+| `dark:prose-invert` | dark mode 下文字自動反轉為淺色 |
+| `max-w-none` | 移除 prose 預設的最大寬度限制 |
+| `prose-p:my-1` | 覆寫段落上下間距 |
+| `prose-code:before:content-none` | 移除行內 code 前後的引號裝飾 |
+| `prose-pre:bg-slate-100` | 覆寫程式碼區塊背景色 |
+
+### 與 rehype-highlight 搭配的完整 Markdown 渲染設定
+
+Markdown 渲染需要四個工具各司其職（詳見 React 進階學習筆記第 31 章）：
+
+```
+react-markdown      → Markdown 字串 → React 元素（結構）
+rehype-highlight    → 程式碼 block 加上 hljs-* CSS class（語法標記）
+highlight.js CSS    → hljs class 的顏色規則（程式碼顏色）
+prose class         → 整體排版（字體、間距、層次）
+```
+
+```tsx
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/github.css'
+
+<div className="prose prose-sm dark:prose-invert max-w-none
+  prose-code:before:content-none prose-code:after:content-none">
+  <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{markdownContent}</ReactMarkdown>
+</div>
+```
+
+dark mode 的 `hljs` 顏色需另外在 CSS 覆寫（因為 github.css 是淺色主題）：
+
+```css
+/* index.css */
+html.dark .hljs {
+  background: #27272a;  /* zinc-800 */
+  color: #e4e4e7;       /* zinc-200 */
+}
+```
+
+---
+
 > 本文件搭配 [React 進階學習筆記](react-進階學習筆記-notion版.md) 第 22 章（Field 組件封裝）與第 29 章（MVC 中的 View 層）一起閱讀，能完整建立「React + Tailwind 工程化」的思維。

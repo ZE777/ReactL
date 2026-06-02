@@ -58,3 +58,11 @@ secrets.json
 # 允許 example 範本
 !.env.example
 !.env.sample
+
+# ===== 前端專案建置產物（各子專案共用） =====
+prompt-studio-admin/node_modules/
+prompt-studio-admin/.next/
+prompt-studio-admin/dist/
+prompt-studio-web/node_modules/
+prompt-studio-web/.next/
+prompt-studio-web/dist/

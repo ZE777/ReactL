@@ -2,7 +2,7 @@
 
 > 根據現有學習筆記、Skills 文件與前端實作準則，整合出完整的 React 知識學習清單。  
 > 難度基準：有 .NET MVC 背景、2 年前端轉職目標。  
-> 最後更新：2026-05-25
+> 最後更新：2026-05-28
 
 ---
 
@@ -10,13 +10,13 @@
 
 | 指標 | 數值 |
 |------|------|
-| ✅ 已完成 | 2 |
+| ✅ 已完成 | 77 |
 | 📖 學習中 | 0 |
-| ⬜ 未開始 / 未讀 | 161 |
+| ⬜ 未開始 / 未讀 | 86 |
 | **總計項目** | **163** |
-| **完成率** | **2 / 163　≈ 1.2%** |
-| **預估已花時數** | ~0.5h |
-| **預估剩餘時數** | ~136.5h |
+| **完成率** | **77 / 163　≈ 47.2%** |
+| **預估已花時數** | ~22h |
+| **預估剩餘時數（依實際速度調整）** | ~55h（學習）+ ~20–30h（Project C 整合部署）≈ 75–85h |
 
 > 每完成一項請更新上方統計數字與完成率。
 
@@ -24,21 +24,24 @@
 
 ## 總覽
 
-| 階段 | 主題 | 項目數 | 預估時數 | 狀態 |
-|------|------|--------|----------|------|
-| 第一階段 | React 核心概念（鳥瞰） | 30 節 | 10h | 📖 學習中 |
-| 第二階段 | React 進階機制（Hook 深度） | 29 節 | 20h | ⬜ 未開始 |
-| 第三階段 | 狀態管理 | 4 項 | 8h | ⬜ 未開始 |
-| 第四階段 | 資料層與 API | 4 項 | 6h | ⬜ 未開始 |
-| 第五階段 | 路由設計（含 React Server Components） | 9 項 | 11h | ⬜ 未開始 |
-| 第六階段 | 工程化工具（Vite / ESLint） | 2 項 | 3h | ⬜ 未開始 |
-| 第七階段 | 實作 Skills（動手練） | 9 項 | 18h | ⬜ 未開始 |
-| 第八階段 | 前端架構守則（閱讀＋實踐） | 9 項 | 9h | ⬜ 未開始 |
-| 第九階段 | **TypeScript**（1 年實作水準） | 22 項 | 20h | ⬜ 未開始 |
-| 第十階段 | **TailwindCSS**（1 年實作水準） | 24 項 | 16h | ⬜ 未開始 |
-| 第十一階段 | **Vitest 自動化測試** | 9 節 | 8h | ⬜ 未開始 |
-| 第十二階段 | **專案結構與架構概念** | 12 項 | 8h | ⬜ 未開始 |
-| **合計** | | **163** | **~137h** | |
+| 階段 | 主題 | 項目數 | 原估時數 | 調整後時數 | 狀態 |
+|------|------|--------|----------|------------|------|
+| 第一階段 | React 核心概念（鳥瞰） | 30 節 | 10h | **4.5h（實績）** | ✅ 完成 |
+| 第二階段 | React 進階機制（Hook 深度） | 29 節 | 20h | **~8h** | ✅ 完成 |
+| 第三階段 | 狀態管理 | 4 項 | 8h | **~5h** | ✅ 完成（Redux 選修跳過）|
+| 第四階段 | 資料層與 API | 4 項 | 6h | **~4h** | ✅ 完成 |
+| 第五階段 | 路由設計（含 React Server Components） | 9 項 | 11h | **~7h** | ✅ 完成 |
+| 第六階段 | 工程化工具（Vite / ESLint） | 2 項 | 3h | **~2h** | ✅ 完成 |
+| 第七階段 | 實作 Skills（動手練） | 9 項 | 18h | **~12h** | ⬜ 未開始 |
+| 第八階段 | 前端架構守則（閱讀＋實踐） | 9 項 | 9h | **~4h** | ⬜ 未開始 |
+| 第九階段 | **TypeScript**（1 年實作水準） | 22 項 | 20h | **~12h** | ⬜ 未開始 |
+| 第十階段 | **TailwindCSS**（1 年實作水準） | 24 項 | 16h | **~10h** | ⬜ 未開始 |
+| 第十一階段 | **Vitest 自動化測試** | 9 節 | 8h | **~5h** | ⬜ 未開始 |
+| 第十二階段 | **專案結構與架構概念** | 12 項 | 8h | **~4h** | ⬜ 未開始 |
+| **合計** | | **163** | **~137h** | **~77h** | |
+
+> 調整依據：實際速度約為原估 2.5–3× 快（.NET背景，概念類吸收快）。實作型Stage壓縮幅度較小（仍需親手寫代碼）。
+> Project C 整合部署額外 ~20–30h（不含在上表內）。
 
 ---
 
@@ -57,64 +60,64 @@
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 3 | React 的本質與定位 | ⬜ 未讀 | |
-| 4 | JSX 不是 HTML | ⬜ 未讀 | className、{}插值、條件渲染 |
-| 5 | Component 化思維 | ⬜ 未讀 | Props 傳遞、拆分粒度 |
-| 6 | Declarative UI（宣告式 UI） | ⬜ 未讀 | vs jQuery 命令式 |
-| 7 | Virtual DOM | ⬜ 未讀 | |
-| 8 | 單向資料流（One-way Data Flow） | ⬜ 未讀 | |
+| 3 | React 的本質與定位 | ✅ 已讀 | Library vs Framework、UI = f(state) |
+| 4 | JSX 不是 HTML | ✅ 已讀 | className、{}插值、三元/&&、.map+key |
+| 5 | Component 化思維 | ✅ 已讀 | Props 傳遞、拆分粒度、export default |
+| 6 | Declarative UI（宣告式 UI） | ✅ 已讀 | 宣告式 vs 命令式（jQuery DOM 操作） |
+| 7 | Virtual DOM | ✅ 已讀 | Diff 演算法、最小 DOM 更新 |
+| 8 | 單向資料流（One-way Data Flow） | ✅ 已讀 | Lifting State Up、callback props |
 
 ### Part 3：State Layer — 工具選型矩陣
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 9 | State 的三種類型 | ⬜ 未讀 | Local / Shared / Server |
-| 10 | 六大工具總覽 | ⬜ 未讀 | 選型決策樹 |
-| 11 | useState — 元件內最小狀態單位 | ⬜ 未讀 | |
-| 12 | useReducer — 把狀態變化集中管理 | ⬜ 未讀 | |
-| 13 | Context API — 輕量全域傳遞 | ⬜ 未讀 | |
-| 14 | Redux Toolkit — 嚴謹的全域 Store | ⬜ 未讀 | |
-| 15 | Zustand — 極簡全域 Store | ⬜ 未讀 | |
-| 16 | Jotai — 原子化狀態模型 | ⬜ 未讀 | |
+| 9 | State 的三種類型 | ✅ 已讀 | Local/Shared/Server、非存放位置而是範圍 |
+| 10 | 六大工具總覽 | ✅ 已讀 | Context低頻、Zustand高頻、ReactQuery伺服器 |
+| 11 | useState — 元件內最小狀態單位 | ✅ 已讀 | 單一獨立值 |
+| 12 | useReducer — 把狀態變化集中管理 | ✅ 已讀 | 複雜狀態機、命名動作、≈MediatR |
+| 13 | Context API — 輕量全域傳遞 | ✅ 已讀 | 解決 Props Drilling |
+| 14 | Redux Toolkit — 嚴謹的全域 Store | ✅ 已讀 | 樣板多、大型團隊用、新專案選Zustand |
+| 15 | Zustand — 極簡全域 Store | ✅ 已讀 | Selector訂閱、只重渲需要的元件 |
+| 16 | Jotai — 原子化狀態模型 | ✅ 已讀 | 每個值獨立atom、≈全域useState |
 
 ### Part 4：Data Layer — Server State 的特殊性
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 17 | 為什麼 Server State 要獨立看待 | ⬜ 未讀 | |
-| 18 | fetch vs React Query | ⬜ 未讀 | |
+| 17 | 為什麼 Server State 要獨立看待 | ✅ 已讀 | 快取、過期、deduplication |
+| 18 | fetch vs React Query | ✅ 已讀 | 3個state vs useQuery、stale-while-revalidate |
 
 ### Part 5：Routing Layer — 兩種路由哲學
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 19 | React Router — 程式碼宣告路徑（CSR） | ⬜ 未讀 | |
-| 20 | Next.js — 檔案路由 + SSR | ⬜ 未讀 | |
-| 21 | 為什麼 Next.js 採用檔案路由 | ⬜ 未讀 | |
+| 19 | React Router — 程式碼宣告路徑（CSR） | ✅ 已讀 | 程式碼明確宣告路由 |
+| 20 | Next.js — 檔案路由 + SSR | ✅ 已讀 | 檔案即路由、app/ 目錄 |
+| 21 | 為什麼 Next.js 採用檔案路由 | ✅ 已讀 | 核心原因：SEO / SSR，CSR 爬蟲抓不到 |
 
 ### Part 6：Build / Tooling Layer
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 22 | 三大支柱：編譯、打包、品質 | ⬜ 未讀 | TypeScript / Vite / ESLint |
+| 22 | 三大支柱：編譯、打包、品質 | ✅ 已讀 | Vite=ESM免打包、比Webpack快、prod用Rollup |
 
 ### Part 7：Class → Hooks 思維革命
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 23 | Class Component 的三大痛 | ⬜ 未讀 | |
-| 24 | Function + Hooks 怎麼解 | ⬜ 未讀 | |
-| 25 | 常用 Hook 速查表 | ⬜ 未讀 | |
+| 23 | Class Component 的三大痛 | ✅ 已讀 | this綁定、生命週期拆散邏輯、HOC複用地獄 |
+| 24 | Function + Hooks 怎麼解 | ✅ 已讀 | Rules of Hooks：頂層呼叫、只在元件/自訂Hook用 |
+| 25 | 常用 Hook 速查表 | ✅ 已讀 | useState/useEffect/useRef/useMemo/useCallback |
 
 ### Part 8：實戰案例 — Repair Alliance App
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 26 | Feature-Based 目錄結構 | ⬜ 未讀 | FSD 架構 |
-| 27 | 從 .NET 到 Next.js 的職責對照 | ⬜ 未讀 | |
-| 28 | 此架構解決的痛點 | ⬜ 未讀 | |
-| 29 | 與傳統 MVC 的關鍵差異 | ⬜ 未讀 | |
-| 30 | 整體技術棧解析 | ⬜ 未讀 | |
+| 26 | Feature-Based 目錄結構 | ✅ 已讀 | 功能內聚、刪功能只刪一個資料夾 |
+| 27 | 從 .NET 到 Next.js 的職責對照 | ✅ 已讀 | 技術分層 vs 功能分層 |
+| 28 | 此架構解決的痛點 | ✅ 已讀 | 跨資料夾跳來跳去的問題 |
+| 29 | 與傳統 MVC 的關鍵差異 | ✅ 已讀 | MVC=技術層分工、FSD=功能自治 |
+| 30 | 整體技術棧解析 | ✅ 已讀 | 五層架構各工具分工串通 |
 
 ---
 
@@ -126,75 +129,75 @@
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 1 | 從操作 DOM 到資料驅動 | ⬜ 未讀 | `UI = f(state)` |
-| 2 | 單向資料流與受控組件 | ⬜ 未讀 | Controlled vs Uncontrolled |
-| 3 | Virtual DOM 與 Diffing 機制 | ⬜ 未讀 | Reconciliation 演算法 |
-| 4 | 與 .NET MVC 架構的映射 | ⬜ 未讀 | |
+| 1 | 從操作 DOM 到資料驅動 | ✅ 已讀 | UI = f(state)，宣告式 vs 命令式 |
+| 2 | 單向資料流與受控組件 | ✅ 已讀 | Controlled=state驅動、Uncontrolled=ref讀DOM |
+| 3 | Virtual DOM 與 Diffing 機制 | ✅ 已讀 | key=身分證、無key按位置比對會出錯 |
+| 4 | 與 .NET MVC 架構的映射 | ✅ 已讀 | useState≈ViewModel、useEffect≈jQuery ready |
 
 ### Part 2：JavaScript 記憶體模型
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 5 | 嚴格相等對物件的判斷 | ⬜ 未讀 | 參考值 vs 值 |
-| 6 | 不可變性原則 | ⬜ 未讀 | Immutability |
-| 7 | 淺拷貝 vs 深拷貝 | ⬜ 未讀 | spread / structuredClone |
+| 5 | 嚴格相等對物件的判斷 | ✅ 已讀 | Primitive=值、Object=位址、=== 比位址 |
+| 6 | 不可變性原則 | ✅ 已讀 | setState必須給新物件，React用===偵測變化 |
+| 7 | 淺拷貝 vs 深拷貝 | ✅ 已讀 | spread=淺拷貝巢狀仍共用、structuredClone=深 |
 
 ### Part 3：State 與渲染時序
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 8 | useState 的快照機制與批次更新 | ⬜ 未讀 | 閉包陷阱 |
-| 9 | 渲染時序 Render Pipeline | ⬜ 未讀 | Trigger → Render → Commit |
-| 10 | Class Component 生命週期 | ⬜ 未讀 | 對照 Hook 等價 |
+| 8 | useState 的快照機制與批次更新 | ✅ 已讀 | 快照凍結、prev=>prev+1才能累加 |
+| 9 | 渲染時序 Render Pipeline | ✅ 已讀 | Trigger→Render(VDOM)→Commit(真實DOM) |
+| 10 | Class Component 生命週期 | ✅ 已讀 | []掛載、[dep]監聽、return cleanup卸載 |
 
 ### Part 4：useEffect 與副作用管理
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 11 | useEffect 三大模式 | ⬜ 未讀 | 掛載/更新/卸載 |
-| 12 | 死循環陷阱 | ⬜ 未讀 | 依賴陣列設計 |
-| 13 | Cleanup Function 清理機制 | ⬜ 未讀 | |
-| 14 | 事件監聽器管理（Cleanup 應用 1） | ⬜ 未讀 | |
-| 15 | 競態競爭處理（Cleanup 應用 2） | ⬜ 未讀 | Race condition |
+| 11 | useEffect 三大模式 | ✅ 已讀 | []掛載、[dep]監聽、return cleanup |
+| 12 | 死循環陷阱 | ✅ 已讀 | 無[]每次渲染都跑→無限迴圈 |
+| 13 | Cleanup Function 清理機制 | ✅ 已讀 | return ()=> 關閉連線/取消訂閱 |
+| 14 | 事件監聽器管理（Cleanup 應用 1） | ✅ 已讀 | WebSocket/SSE 切換時先 close 舊連線 |
+| 15 | 競態競爭處理（Cleanup 應用 2） | ✅ 已讀 | cancelled flag、React Query 自動處理 |
 
 ### Part 5：衍生資料與效能優化
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 16 | useMemo vs useEffect 的選用 | ⬜ 未讀 | |
-| 17 | 效能優化三大法寶 | ⬜ 未讀 | memo / useMemo / useCallback |
+| 16 | useMemo vs useEffect 的選用 | ✅ 已讀 | 算值用useMemo、副作用用useEffect、渲染中vs渲染後 |
+| 17 | 效能優化三大法寶 | ✅ 已讀 | React.memo包元件、useMemo穩定值、useCallback穩定函式位址 |
 
 ### Part 6：架構決策
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 18 | Prop Drilling 與 Context API | ⬜ 未讀 | |
-| 19 | 全域狀態管理架構決策 | ⬜ 未讀 | 何時選 Zustand / Redux |
-| 20 | Custom Hook 與 Context 權衡 | ⬜ 未讀 | |
+| 18 | Prop Drilling 與 Context API | ✅ 已讀 | Props Drilling問題、Context解法 |
+| 19 | 全域狀態管理架構決策 | ✅ 已讀 | Context低頻/Zustand高頻/ReactQuery伺服器 |
+| 20 | Custom Hook 與 Context 權衡 | ✅ 已讀 | Project C選型實例：登入Zustand、主題Context、API ReactQuery |
 
 ### Part 7：邏輯封裝與實戰
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 21 | Custom Hook 實戰：封裝 useFetch | ⬜ 未讀 | 含實作練習 |
-| 22 | 表單處理與驗證：Controlled vs Uncontrolled vs RHF | ⬜ 未讀 | react-hook-form |
-| 23 | HOC 高階組件：橫切關注點與權限控管 | ⬜ 未讀 | |
+| 21 | Custom Hook 實戰：封裝 useFetch | ✅ 已讀 | useFetch<T> 泛型 + cancelled flag + useConversationList 實作 |
+| 22 | 表單處理與驗證：Controlled vs Uncontrolled vs RHF | ✅ 已讀 | RHF 管狀態、register 注入 ref/onChange、handleSubmit 包驗證 |
+| 23 | HOC 高階組件：橫切關注點與權限控管 | ✅ 已讀 | 包裝函式 f(Component)=>NewComponent、withAuth + useAuth 組合、現代用 Wrapper Component |
 
 ### Part 8：路由與全域狀態
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 24 | React Router：巢狀路由、Guard、URL 參數 | ⬜ 未讀 | |
-| 25 | React.lazy 與 Suspense：延遲載入 | ⬜ 未讀 | Code Splitting |
-| 26 | Zustand 全域狀態管理：對照 .NET DI Lifetimes | ⬜ 未讀 | |
+| 24 | React Router：巢狀路由、Guard、URL 參數 | ✅ 已讀 | BrowserRouter/Routes/Route 對照 .NET RouteConfig、useParams/useSearchParams |
+| 25 | React.lazy 與 Suspense：延遲載入 | ✅ 已讀 | Code Splitting 按路由切 JS bundle、非滾動觸發 |
+| 26 | Zustand 全域狀態管理：對照 .NET DI Lifetimes | ✅ 已讀 | selector 訂閱只重渲需要的元件、比 Context 效能好 |
 
 ### Part 9：品質保證與部署
 
 | # | 章節 | 完成度 | 備註 |
 |---|------|--------|------|
-| 27 | React DevTools 與效能診斷 | ⬜ 未讀 | |
-| 28 | Vite 建置工具與環境配置 | ⬜ 未讀 | |
-| 29 | MVC 在 React 中的最終實踐 | ⬜ 未讀 | |
+| 27 | React DevTools 與效能診斷 | ✅ 已讀 | 元件樹/props/state 檢查、Profiler 找重渲染 |
+| 28 | Vite 建置工具與環境配置 | ✅ 已讀 | VITE_前綴環境變數、@ alias、proxy 繞 CORS |
+| 29 | MVC 在 React 中的最終實踐 | ✅ 已讀 | Component=View、Hook=Service、Zustand=Session、ReactQuery=Repository |
 
 ---
 
@@ -203,9 +206,9 @@
 
 | # | 主題 | 完成度 | 預估 | 備註 |
 |---|------|--------|------|------|
-| 1 | Zustand 基礎：建 Store、讀寫、分片 | ⬜ 未開始 | 2h | 對照 .NET DI |
-| 2 | Zustand 進階：persist、devtools、middleware | ⬜ 未開始 | 2h | |
-| 3 | Context API 實作：Theme / Auth / Lang | ⬜ 未開始 | 2h | |
+| 1 | Zustand 基礎：建 Store、讀寫、分片 | ✅ 完成 | 2h | conversationStore 實作完成 |
+| 2 | Zustand 進階：persist、devtools、middleware | ✅ 完成 | 2h | |
+| 3 | Context API 實作：Theme / Auth / Lang | ✅ 完成 | 2h | ThemeContext 實作完成 |
 | 4 | Redux Toolkit 入門（選修）| ⬜ 未開始 | 2h | 大型專案需要 |
 
 ---
@@ -216,10 +219,10 @@
 
 | # | 主題 | 完成度 | 預估 | 備註 |
 |---|------|--------|------|------|
-| 1 | Axios 攔截器實作（token 自動帶入、錯誤統一處理）| ⬜ 未開始 | 1.5h | |
-| 2 | React Query：useQuery / useMutation 基礎 | ⬜ 未開始 | 2h | |
-| 3 | React Query：快取策略、staleTime、invalidate | ⬜ 未開始 | 1.5h | |
-| 4 | 錯誤邊界（Error Boundary）與 Suspense 整合 | ⬜ 未開始 | 1h | |
+| 1 | Axios 攔截器實作（token 自動帶入、錯誤統一處理）| ✅ 完成 | 1.5h | src/lib/api.ts 實作完成 |
+| 2 | React Query：useQuery / useMutation 基礎 | ✅ 完成 | 2h | PersonalList + PersonalForm 實作 |
+| 3 | React Query：快取策略、staleTime、invalidate | ✅ 完成 | 1.5h | invalidateQueries 於 mutation 後使用 |
+| 4 | 錯誤邊界（Error Boundary）與 Suspense 整合 | ✅ 完成 | 1h | GlobalFallback 於 main.tsx |
 
 ---
 
@@ -232,25 +235,25 @@
 
 | # | 主題 | 完成度 | 預估 | 備註 |
 |---|------|--------|------|------|
-| 1 | React Router v6：BrowserRouter、巢狀路由、Outlet | ⬜ 未開始 | 1.5h | |
-| 2 | React Router：Route Guard（PrivateRoute 實作） | ⬜ 未開始 | 1h | |
+| 1 | React Router v6：BrowserRouter、巢狀路由、Outlet | ✅ 完成 | 1.5h | App.tsx + AdminLayout.tsx 實作完成 |
+| 2 | React Router：Route Guard（PrivateRoute 實作） | ✅ 完成 | 1h | PrivateRoute.tsx + LoginPage.tsx |
 
 ### 5-B：SSR 路由與 React Server Components（Next.js App Router）
 
 | # | 主題 | 完成度 | 預估 | 備註 |
 |---|------|--------|------|------|
-| 3 | Next.js App Router 基礎：page.tsx、layout.tsx、loading.tsx、error.tsx | ⬜ 未開始 | 2h | 檔案約定速查 |
-| 4 | Server Components vs Client Components：`'use client'` 邊界與序列化限制 | ⬜ 未開始 | 1h | RSC 核心概念，Props 必須可序列化 |
-| 5 | RSC 資料抓取模式：在 Server Component 直接 `await fetch`，告別 useEffect + useState | ⬜ 未開始 | 1h | 對照傳統 CSR fetch；Next 的 fetch 快取策略 |
-| 6 | Streaming + Suspense：`<Suspense>` 邊界、loading.tsx、RSC payload 漸進送達 | ⬜ 未開始 | 1h | TTFB 與 LCP 的關係 |
-| 7 | Server Actions：`'use server'`、`<form action={fn}>`、`useFormState` / `useFormStatus` | ⬜ 未開始 | 1.5h | 取代傳統 API Route + fetch |
-| 8 | RSC 決策樹：何時選 Server / Client、Client Boundary 上推陷阱、`children` 透傳模式 | ⬜ 未開始 | 0.5h | 最常見錯誤：整頁誤標 'use client' |
+| 3 | Next.js App Router 基礎：page.tsx、layout.tsx、loading.tsx、error.tsx | ✅ 完成 | 2h | 檔案約定速查 |
+| 4 | Server Components vs Client Components：`'use client'` 邊界與序列化限制 | ✅ 完成 | 1h | RSC 核心概念，Props 必須可序列化 |
+| 5 | RSC 資料抓取模式：在 Server Component 直接 `await fetch`，告別 useEffect + useState | ✅ 完成 | 1h | 對照傳統 CSR fetch；Next 的 fetch 快取策略 |
+| 6 | Streaming + Suspense：`<Suspense>` 邊界、loading.tsx、RSC payload 漸進送達 | ✅ 完成 | 1h | TTFB 與 LCP 的關係 |
+| 7 | Server Actions：`'use server'`、`<form action={fn}>`、`useFormState` / `useFormStatus` | ✅ 完成 | 1.5h | 取代傳統 API Route + fetch |
+| 8 | RSC 決策樹：何時選 Server / Client、Client Boundary 上推陷阱、`children` 透傳模式 | ✅ 完成 | 0.5h | 最常見錯誤：整頁誤標 'use client' |
 
 ### 5-C：雙軌架構整合
 
 | # | 主題 | 完成度 | 預估 | 備註 |
 |---|------|--------|------|------|
-| 9 | 雙軌路由架構（Next SSR + Vite CSR 分工）| ⬜ 未開始 | 1.5h | 對應 SKILL_雙軌路由 |
+| 9 | 雙軌路由架構（Next SSR + Vite CSR 分工）| ✅ 完成 | 1.5h | 對應 SKILL_雙軌路由 |
 
 ---
 
@@ -260,8 +263,8 @@
 
 | # | 主題 | 完成度 | 預估 | 備註 |
 |---|------|--------|------|------|
-| 1 | Vite：環境變數（.env）、alias 設定、build 優化 | ⬜ 未開始 | 1.5h | 對應進階筆記 Part 9 |
-| 2 | ESLint + Prettier + Husky pre-commit 全套設定 | ⬜ 未開始 | 1.5h | |
+| 1 | Vite：環境變數（.env）、alias 設定、build 優化 | ✅ 完成 | 1.5h | 對應進階筆記 Part 9 |
+| 2 | ESLint + Prettier + Husky pre-commit 全套設定 | ✅ 完成 | 1.5h | |
 
 ---
 
@@ -513,3 +516,136 @@
 | 📖 學習中 | 正在進行，或已讀但未實作 |
 | ✅ 完成 | 讀完且理解，或實作通過 |
 | 🔁 需複習 | 曾讀過，需要再鞏固 |
+
+---
+
+# Project C：AI Prompt Studio 實作進度
+
+> 對應規劃文件：[AIPromptStudio規劃.md](../需求規劃/AIPromptStudio規劃.md)  
+> 最後更新：2026-05-28
+
+## 實作進度統計
+
+| 指標 | 數值 |
+|------|------|
+| ✅ 已完成 | 18 |
+| 📖 進行中 | 6 |
+| ⬜ 未開始 | 9 |
+| **總計功能項** | **33** |
+| **完成率** | **18 / 33　≈ 54.5%** |
+
+> 每完成一個功能項請更新上方統計數字。
+
+---
+
+## 模組總覽
+
+| 模組 | 功能數 | 已完成 | 對應學習階段 |
+|------|--------|--------|-------------|
+| A. 基礎建置 | 4 | 4 | 第二～五階段 |
+| B. 聊天功能 | 5 | 3 | 第三、四階段 |
+| C. Persona 管理 | 5 | 5 | 第三、四階段 |
+| D. Prompt 模板 | 4 | 2 | 第四階段 |
+| E. 統計儀表板 | 2 | 0 | 第四、五階段 |
+| F. 多模型切換 | 2 | 0 | 第四階段 |
+| G. 前台 Next.js | 3 | 0 | 第五階段 |
+| H. 部署與 CI/CD | 1 | 0 | 第十一階段 |
+| I. 外部平台整合 | 4 | 2 | 後端外包 + 第五階段 |
+| J. Prompt Builder | 3 | 2 | 第四階段 |
+| **合計** | **33** | **18** | |
+
+---
+
+## A. 基礎建置
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| A1 | Vite + React + TypeScript 專案初始化 | ✅ 完成 | 第二階段 | prompt-studio-admin 已建立 |
+| A2 | React Router 路由架構（含 PrivateRoute）| ✅ 完成 | 第五階段 5-A | App.tsx / AdminLayout / PrivateRoute / LoginPage |
+| A3 | Zustand Store 基礎架構（conversationStore）| ✅ 完成 | 第三階段 | conversationStore 實作完成 |
+| A4 | Axios 攔截器 + API 層封裝 | ✅ 完成 | 第四階段 | src/lib/api.ts 完成 |
+
+## B. 聊天功能
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| B1 | 對話列表（sidebar）| ✅ 完成 | 第三階段 | ConversationSidebar URL routing、navigate、seeding guard |
+| B2 | 聊天訊息輸入與送出 | ✅ 完成 | 第二階段 Part 7 | ChatPage mock streaming、stop 控制、streamTimerRef |
+| B3 | SSE 串流 AI 回應顯示 | 📖 進行中 | 第四階段 | 目前為 mock setTimeout，待接真實 SSE API |
+| B4 | 對話 CRUD（新增、刪除、重新命名）| ✅ 完成 | 第四階段 | Zustand store + ConversationsPage 刪除 |
+| B5 | Markdown 渲染 | ⬜ 未開始 | 第七階段 | react-markdown |
+
+## C. Persona 管理
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| C1 | Persona 列表載入 | ✅ 完成 | 第四階段 | PersonaListPanel + useQuery + inline 刪除確認 |
+| C2 | Persona 選擇器 | ✅ 完成 | 第二階段 Part 1-2 | SelectorPill 整合至 ChatPage，Persona + 模型切換 |
+| C3 | Persona CRUD 表單 | ✅ 完成 | 第二階段 Part 7 | PersonaForm RHF + useMutation + PromptBuilder 整合 |
+| C4 | Persona 卡片元件 | ✅ 完成 | 第二階段 Part 2 | PersonaListPanel 內建 card 樣式，hover 操作 |
+| C5 | Persona Prompt 版本管理 | ✅ 完成 | 第四階段 | PersonaVersionsPage 版本列表 + 還原 + 展開 Prompt |
+
+## D. Prompt 模板
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| D1 | 模板列表 | ✅ 完成 | 第四階段 | PromptsPage useQuery + 分類篩選 + TemplateCard |
+| D2 | 模板編輯器（含變數插槽）| 📖 進行中 | 第二階段 Part 7 | 目前為純 textarea，變數插槽功能待 V2 |
+| D3 | 模板預覽 | 📖 進行中 | 第五階段 | 「複製使用」按鈕已實作，完整預覽頁待 V2 |
+| D4 | 模板 CRUD | ✅ 完成 | 第四階段 | PromptsPage create / update / delete mutations |
+
+## E. 統計儀表板
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| E1 | 使用量統計圖表 | 📖 進行中 | 第四階段 | StatsPage mock bar chart，recharts 整合待 V2 |
+| E2 | 匯出報表 | ⬜ 未開始 | 第四階段 | |
+
+## F. 多模型切換（免費 API）
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| F1 | 模型選擇器（Gemini / Groq Llama 切換）| 📖 進行中 | 第三階段 | SelectorPill + SettingsPage UI 完成，待 Zustand 接 API |
+| F2 | 後端 IModelProvider 介面 + 各 Provider 實作 | ⬜ 未開始 | 後端階段 | Gemini Flash、Groq Llama 3，僅免費方案 |
+
+## G. 前台 Next.js（prompt-studio-web）
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| F1 | Next.js 專案初始化 + App Router | ⬜ 未開始 | 第五階段 5-B | |
+| F2 | 分享頁（公開 Prompt 模板展示）| ⬜ 未開始 | 第五階段 5-B | RSC 資料抓取 |
+| F3 | SEO metadata + OG 設定 | ⬜ 未開始 | 第八階段 03 | |
+
+## H. 部署與 CI/CD
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| H1 | GitHub Actions 自動測試 + 部署 | ⬜ 未開始 | 第十一階段 | |
+
+## I. 外部平台整合（V3）
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| I1 | Line Bot Webhook 後端 | ⬜ 未開始 | 後端外包 | Claude 負責實作 |
+| I2 | Discord Bot Webhook 後端 | ⬜ 未開始 | 後端外包 | Claude 負責實作 |
+| I3 | Bot 綁定管理頁（`/bots`）| ✅ 完成 | 第四、五階段 | BotsPage React Query CRUD + toggle + inline 刪除確認 |
+| I4 | 外部對話監控頁（`/monitor`）| ✅ 完成 | 第四階段 | MonitorPage 平台篩選 + mock 對話列表 |
+
+## J. Prompt Builder（V2）
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| J1 | 結構化表單（角色/背景/任務/格式/限制/範例 → 自動組裝）| ✅ 完成 | 第七階段 Skills | PromptBuilder 6 區塊 + assembleSystemPrompt 純函式 |
+| J2 | AI 強化按鈕（白話描述 → Groq 改寫 System Prompt）| 📖 進行中 | 第四階段 | mock toast 已佔位，待接真實 Groq API |
+| J3 | 即時完整度提示（各區塊填寫狀態 + 完整度 %）| ✅ 完成 | 第二階段 Part 5 | CompletenessPanel sticky sidebar，% bar + 逐項檢查 |
+
+---
+
+## 實作進度圖例
+
+| 符號 | 意義 |
+|------|------|
+| ⬜ 未開始 | 尚未動工 |
+| 📖 練習中 | 有練習版本，尚未整合進正式流程 |
+| 🔧 開發中 | 正在實作 |
+| ✅ 完成 | 功能完整、可運作 |

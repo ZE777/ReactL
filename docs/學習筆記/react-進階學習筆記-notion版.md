@@ -879,6 +879,16 @@ const handleClick = useCallback(() => doSomething(), []);
 2. **三劍客是組合技**：`useCallback` 通常配合 `React.memo` 才有意義；單獨用 `useCallback` 可能毫無作用
 3. **加了反而變慢的可能**：比較位址、維護快取本身也有成本，輕量場景反而是負擔
 
+### 學習者筆記（2026-05-27）
+
+三個工具的職責與協作關係整理：
+
+- **`useMemo`**：快取「計算結果（值）」。在渲染過程中執行，用於資料篩選、排序等高成本運算，避免每次渲染都重跑。依賴陣列沒改就直接回傳快取值。
+- **`React.memo`**：包住子元件，讓子元件的 props 沒有改變時跳過重新渲染。是「元件層級」的記憶化。
+- **`useCallback`**：搭配 `React.memo` 使用的關鍵。函式每次渲染都是新物件（新記憶體位址），會讓 `React.memo` 誤判 props 改變而重渲。`useCallback` 讓函式的記憶體位址保持穩定，使 `React.memo` 的比對能正確判斷「props 沒變」。
+
+> 三個一起用才有完整效果：`React.memo` 包子元件 + `useCallback` 穩定函式 props + `useMemo` 穩定物件 props。
+
 ---
 
 # Part 6：架構決策
@@ -1094,6 +1104,18 @@ useEffect(() => {
 ```
 
 > Context 提供狀態，useEffect 根據狀態執行動作。
+
+### 學習者筆記（2026-05-27）— 架構選型決策實例（Project C 後台）
+
+| 需求 | 選用工具 | 理由 |
+|---|---|---|
+| 登入使用者資料（Header、Sidebar、設定頁共用） | `Zustand` | 會在登入/登出時更新，頻率不低，Context 會全量重渲 |
+| 深色/淺色模式 | `Context` | 幾乎不變，全站共用，低頻率正是 Context 的適用場景 |
+| 表單 validation 錯誤訊息 | `useState` | 只有單一表單元件需要，不需共用 |
+| API 對話列表（需快取、背景刷新） | `React Query` | Server State 標配工具，Stage 4 深入學習 |
+| Toast 通知（任何地方都能觸發） | `Zustand` | 需要在元件外（如 API 攔截器）觸發，Zustand 不依賴 React tree |
+
+> 判斷依據：**Context 適合「幾乎不變的全域屬性（語系、主題色）」，其他共享狀態用 Zustand；Server 資料用 React Query。**
 
 ---
 
@@ -1390,6 +1412,27 @@ function RequireAuth({ children }) {
 
 第 22 章的 `<AddressSelector />` 是**水平拆分**（業務組件解耦），這一章的 HOC 是**垂直拆分**（在原組件上疊加邏輯）。兩者都能達到「低耦合、高內聚」，差別在切的方向。
 
+### 學習者筆記（2026-05-27）
+
+HOC 本質是一個**共用的包裝函式**，內部包含：
+1. 判斷邏輯的呼叫（如 `useAuth()` 取得登入狀態）
+2. 條件判斷（通過 → 渲染原元件、不通過 → redirect 或顯示其他內容）
+3. 把 props 透傳給原元件（`{...props}`）
+
+```tsx
+// HOC = 包裝函式，吃元件、吐增強版元件
+function withAuth(Component) {
+  return function ProtectedPage(props) {
+    const { isLoggedIn } = useAuth()       // 共用邏輯抽在 hook
+    if (!isLoggedIn) return <Navigate to="/login" />
+    return <Component {...props} />        // 條件通過才渲染原元件
+  }
+}
+```
+
+> 與 .NET `[Authorize]` Attribute 概念相同，差別在 React 用函式包元件，.NET 用 Attribute 掛 Controller。  
+> 現代 React 更常用 `<RequireAuth>` Wrapper Component 取代 HOC，語法更直觀，概念完全等價。
+
 ---
 
 # Part 8：路由與全域狀態
@@ -1519,6 +1562,25 @@ function Breadcrumbs() {
 - 全域 `<ErrorBoundary>` + `<Suspense>` 包覆 Routes（見下一章）
 - Code Splitting：用 `React.lazy()` 拆分大型路由（見下一章）
 
+### 學習者筆記（2026-05-27）
+
+React Router 三層結構對照 .NET：
+
+| React Router | .NET 對應 | 說明 |
+|---|---|---|
+| `<BrowserRouter>` | `Program.cs` 的 `app.UseRouting()` | 啟用路由功能的最外層容器 |
+| `<Routes>` | Controller 的路由表集合 | 「從這裡開始比對路由規則」 |
+| `<Route path="/user/:id">` | `[Route("user/{id}")]` | 一條路由規則對應一個元件 |
+
+URL 參數取法：
+
+| URL 型態 | 範例 | 取法 | .NET 對應 |
+|---|---|---|---|
+| Route Parameter | `/user/1` | `useParams()` | `route["id"]` |
+| Query String | `/user?id=1` | `useSearchParams()` | `Request.Query["id"]` |
+
+> 之前用 Next.js 的檔案路由（`app/user/[id]/page.tsx`）概念相同，只是 Next 用資料夾結構取代程式碼宣告，React Router 則是明確在程式碼中定義路由表。
+
 ---
 
 ## 25. React.lazy 與 Suspense：延遲載入
@@ -1585,6 +1647,21 @@ const HeavyReport = lazy(() => import('./pages/HeavyReport'));
 | 延遲載入程式集 | `Assembly.LoadFile()` | `React.lazy(() => import(...))` |
 | 全域例外處理 | Global.asax / Middleware | ErrorBoundary |
 | 載入中畫面 | 自己控制 | Suspense fallback |
+
+### 學習者筆記（2026-05-27）
+
+**易混淆：React.lazy 不是「滾動到位置才載入」**
+
+| 技術 | 觸發時機 | 用途 |
+|---|---|---|
+| `React.lazy` + `Suspense` | **路由切換**（導航到該頁）時才下載 JS | Code Splitting，減少首頁 bundle 大小 |
+| Intersection Observer | **滾動到元素進入視窗**時觸發 | 圖片 lazy load、無限捲動 |
+
+React.lazy 的核心目的是**把 JS bundle 切小**，不是控制資料的載入時機：
+- 沒有 lazy → 首次載入下載全部 5MB JS → 首頁卡頓
+- 有 lazy → 首次只下載 200KB，切到 /report 才下載報表頁的 JS
+
+Suspense 是「等待 JS 下載期間的 Loading UI」，不是資料 loading（資料 loading 用 React Query 的 `isLoading`）。
 
 ---
 
@@ -2036,3 +2113,220 @@ React 進階知識
 ---
 
 > 本文件基於學習對話整理，可作為 React 進階開發的查閱手冊與面試準備。
+
+---
+
+# Part 10：實戰補充（AI Prompt Studio 專案記錄）
+
+> 以下章節來自實際專案開發，記錄書本未涵蓋但真實遇到的技術點。
+
+---
+
+## 第 30 章：SSE 串流接收（fetch + ReadableStream）
+
+### 什麼是 SSE
+
+SSE（Server-Sent Events）是一種「伺服器→客戶端單向推送」的技術。和 WebSocket 的差別：
+
+| | SSE | WebSocket | 輪詢（Polling）|
+|---|---|---|---|
+| 方向 | 單向（Server→Client）| 雙向 | Client 主動問 |
+| 協議 | HTTP/1.1 | WS | HTTP |
+| 斷線重連 | 瀏覽器自動 | 需手動 | N/A |
+| 適合 | AI 串流、通知推送 | 即時聊天、遊戲 | 輕量定期查詢 |
+
+AI 回應串流用 SSE 最適合：伺服器逐字產生、逐字推送，不需要雙向通訊。
+
+### React 的實作方式：fetch + ReadableStream
+
+瀏覽器的 `EventSource` API 不支援帶 `Authorization` header，所以 AI 串流改用 `fetch` + `ReadableStream` 手動解析：
+
+```tsx
+const resp = await fetch('/api/v1/ai/chat', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${token}` },
+  body: JSON.stringify({ conversationId, userMessage }),
+  signal: abort.signal,           // 綁 AbortController，讓停止按鈕可以中斷
+})
+
+const reader = resp.body!.getReader()
+const decoder = new TextDecoder()
+let buffer = ''
+
+while (true) {
+  const { done, value } = await reader.read()
+
+  // ⚠️ 關鍵：done 時要沖出 TextDecoder 殘餘 multi-byte 字元（flush）
+  buffer += done ? decoder.decode() : decoder.decode(value, { stream: true })
+
+  const lines = buffer.split('\n')
+  buffer = lines.pop() ?? ''      // 最後一段可能是不完整的行，留著等下次拼接
+
+  for (const line of lines) {
+    if (!line.startsWith('data: ')) continue
+    const chunk = JSON.parse(line.slice(6))
+    // 處理 chunk...
+  }
+
+  if (done) break
+}
+```
+
+**為什麼用 `{ stream: true }` 參數？**
+
+SSE 傳輸的是 UTF-8 文字，但 network packet 可能在多位元組字元（中文）的中間切斷。`decoder.decode(value, { stream: true })` 告訴 TextDecoder「這不是最後一塊，先保留尾端不完整的字元」；最後呼叫 `decoder.decode()`（無 stream:true）才把殘餘沖出來。
+
+### Ref vs State：串流內容的雙軌設計
+
+串流中需要兩個東西：
+- **立即更新畫面**（每個 delta chunk 都要即時顯示）
+- **在完成時取得完整內容**（存入 messages state）
+
+```tsx
+const accumulatedRef = useRef('')        // 同步累加，無渲染開銷
+const [streamingContent, setStreamingContent] = useState('')  // 驅動 UI 渲染
+
+// delta chunk 來了：
+accumulatedRef.current += chunk.content
+setStreamingContent(accumulatedRef.current)
+
+// done chunk 來了（React 18 的關鍵陷阱）：
+const finalContent = accumulatedRef.current  // ← 必須先 capture 到 local 變數
+accumulatedRef.current = ''                   // ← 同步清空
+setMessages(prev => [...prev, { content: finalContent }])
+// 如果直接在 updater 裡讀 accumulatedRef.current，會讀到已清空的 ''
+// 因為 React 18 的 updater 是非同步呼叫，執行時 ref 已經被清過了
+```
+
+> 這個 bug 的現象：訊息泡泡出現幾個字後消失，剩下空的深色方框。  
+> 根本原因：React 18 Automatic Batching 使 updater 非同步執行，ref 同步清空在前。
+
+### AbortController：停止按鈕與切換對話的清理
+
+```tsx
+const abortRef = useRef<AbortController | null>(null)
+
+// 送出時建立新的 abort controller
+const abort = new AbortController()
+abortRef.current = abort
+
+// 停止按鈕
+function handleStop() { abortRef.current?.abort() }
+
+// 切換對話時（useEffect cleanup）
+useEffect(() => {
+  abortRef.current?.abort()
+  // ...重設其他狀態
+  return () => { abortRef.current?.abort() }  // unmount 也要清
+}, [id])
+```
+
+**race condition 守衛：**  
+當串流進行中切換對話，`abort()` 會讓 `reader.read()` 拋出 AbortError。Catch block 必須判斷 `abort.signal.aborted`，已 abort 的就不要更新 state（useEffect 的清理已處理好狀態重設）：
+
+```tsx
+} catch (err) {
+  if (!abort.signal.aborted) {
+    // 非使用者主動中斷：顯示 Toast、保存 partial 內容
+    const partial = accumulatedRef.current
+    accumulatedRef.current = ''
+    if (partial) setMessages(prev => [...prev, { content: partial }])
+    setIsStreaming(false)
+  } else {
+    // 使用者切換對話觸發的 abort：靜默清空 ref，state 由 useEffect 重設
+    accumulatedRef.current = ''
+  }
+}
+```
+
+### beforeunload：串流中關閉頁面的保護
+
+```tsx
+useEffect(() => {
+  if (!isStreaming) return
+  function handleBeforeUnload(e: BeforeUnloadEvent) {
+    e.preventDefault()
+    e.returnValue = ''   // 觸發瀏覽器的「確定要離開嗎？」提示
+  }
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+}, [isStreaming])
+```
+
+---
+
+## 第 31 章：Markdown 渲染管線（react-markdown）
+
+### 各套件職責分工
+
+一個 Markdown 字串到「有樣式的 HTML」需要四個獨立工具：
+
+```
+Markdown 字串
+  ↓
+react-markdown          → 解析結構：**粗體** → <strong>，# 標題 → <h1>
+  ↓
+rehype-highlight        → 標記程式碼：在 <code> 裡加 class="hljs-keyword" 等 CSS class
+  ↓
+highlight.js CSS        → 決定顏色：.hljs-keyword { color: #d73a49 } 等規則
+  ↓
+@tailwindcss/typography → 決定排版：prose class 讓 <h1> 有大字、段落有間距
+```
+
+**react-markdown 本身完全不管樣式**，只負責把 Markdown 語法翻成對應的 HTML 標籤。拿掉 prose class 標籤還在、拿掉 github.css 語法標記還在，只是各自沒有視覺效果。
+
+### 使用方式
+
+```tsx
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/github.css'
+
+// assistant 訊息泡泡
+<div className="prose prose-sm dark:prose-invert max-w-none
+  prose-p:my-1
+  prose-pre:bg-slate-100 dark:prose-pre:bg-zinc-800
+  prose-code:text-violet-600 dark:prose-code:text-violet-400
+  prose-code:before:content-none prose-code:after:content-none">
+  <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
+</div>
+```
+
+- `prose-sm`：縮小版字體，適合 chat bubble
+- `dark:prose-invert`：dark mode 下文字顏色反轉（深色字→淺色字）
+- `prose-code:before:content-none`：移除 typography 預設在行內 code 加的引號裝飾
+
+### 為什麼串流中不渲染 Markdown
+
+```tsx
+{isStreaming ? (
+  <span>{content}</span>       // 純文字：串流中
+) : (
+  <ReactMarkdown>...</ReactMarkdown>  // Markdown：完成後
+)}
+```
+
+AI 輸出到一半時 Markdown 語法是不完整的：
+
+```
+"## 標題\n\n這是"        → <h2> 開了但段落沒結束，排版跳動
+"```js\nconst x = 1"    → 程式碼區塊沒關閉，後面全被包進去
+```
+
+react-markdown 有自動容錯，但結果不可預期、會閃爍。**等 done chunk 到達後拿到完整字串再渲染，結果才是穩定的。**
+
+### Tailwind v4 的 @plugin 語法
+
+Tailwind v4 移除了 `tailwind.config.js` 的 `plugins[]` 陣列，改在 CSS 檔案中宣告：
+
+```css
+/* index.css */
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";   /* ← v4 的寫法，不是 config.js */
+```
+
+v3 的舊寫法（不適用 v4）：
+```js
+// tailwind.config.js（v3）
+module.exports = { plugins: [require('@tailwindcss/typography')] }
+```
