@@ -6,6 +6,8 @@
 
 ```
 ReactL/
+├── prompt-studio-admin/   # 後台管理介面（Vite + React + Zustand + React Query）
+├── prompt-studio-web/     # 前台展示網站（Next.js 14 App Router + Tailwind）
 ├── docs/                  # 學習筆記、進度追蹤、規劃文件
 │   ├── 學習追蹤/           # React 學習進度表（163 項 / 137h）
 │   ├── 學習筆記/           # React 鳥瞰、Hook 深度、Tailwind、Vitest 等
