@@ -45,6 +45,54 @@ ReactL/
 - **AI**：Gemini 2.0 Flash / Groq Llama 3.1 70B
 - **部署**：IIS（API + 後台靜態）+ PM2（前台 Next.js）
 
+## 本機環境設定
+
+Clone 後需要手動建立以下檔案（均已被 `.gitignore` 排除，不會進版控）：
+
+### 後台（prompt-studio-admin）
+
+複製 `.env.example` 為 `.env.local`：
+
+```bash
+cp prompt-studio-admin/.env.example prompt-studio-admin/.env.local
+```
+
+| 變數 | 說明 | 範例 |
+|------|------|------|
+| `VITE_API_BASE_URL` | 後端 API 位址（含版本前綴）| `https://localhost:44345/api/v1` |
+| `VITE_UI_URL` | 後台前端完整網址 | `http://localhost:5173` |
+
+### 前台（prompt-studio-web）
+
+複製 `.env.example` 為 `.env.local`：
+
+```bash
+cp prompt-studio-web/.env.example prompt-studio-web/.env.local
+```
+
+| 變數 | 說明 | 範例 |
+|------|------|------|
+| `NEXT_PUBLIC_API_URL` | 後端 API 位址（不含版本前綴）| `http://localhost:5000` |
+
+### 後端（ASP.NET Core）
+
+`appsettings.Development.json` 需包含：
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=...;Database=PromptStudio;..."
+  },
+  "Jwt": {
+    "Key": "your-secret-key",
+    "Issuer": "PromptStudio",
+    "Audience": "PromptStudio"
+  }
+}
+```
+
+> 後端 repo 獨立管理，此處僅列出對接所需的設定項目。
+
 ## License
 
 Private — personal learning repo.
