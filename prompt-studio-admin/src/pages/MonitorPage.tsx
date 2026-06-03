@@ -62,7 +62,7 @@ export default function MonitorPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // 左側：對話列表（以使用者 ID 為單位分組）
-  const { data: convData, isLoading: convLoading, error: convError, refetch: convRefetch } =
+  const { data: convData, isLoading: convLoading, error: convError, refetch: convRefetch, isFetching: convFetching } =
     useQuery<PagedResponse<ConversationSummary>>({
       queryKey: ['monitor-conversations', platformFilter, convPage],
       queryFn: () => {
@@ -74,7 +74,7 @@ export default function MonitorPage() {
     })
 
   // 右側：選定對話的訊息記錄（有 externalUserId 時後端回傳完整內容，不截斷）
-  const { data: msgData, isLoading: msgLoading } =
+  const { data: msgData, isLoading: msgLoading, refetch: msgRefetch, isFetching: msgFetching } =
     useQuery<PagedResponse<ExternalMessageItem>>({
       queryKey: ['monitor-messages', selectedUserId, selectedPlatform, msgPage],
       queryFn: () => {
@@ -136,6 +136,16 @@ export default function MonitorPage() {
             <h2 className="text-lg font-semibold text-slate-800 dark:text-zinc-100">對話監控</h2>
             <p className="text-sm text-slate-400 dark:text-zinc-400 mt-0.5">外部平台的使用者對話記錄</p>
           </div>
+          <button
+            onClick={() => convRefetch()}
+            disabled={convFetching}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          >
+            <svg className={`w-3.5 h-3.5 ${convFetching ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {convFetching ? '更新中' : '全表刷新'}
+          </button>
         </div>
         <div className="flex gap-2">
           {(['all', 'line', 'discord'] as PlatformFilter[]).map(p => (
@@ -326,6 +336,16 @@ export default function MonitorPage() {
                 <span className="text-xs text-slate-400 dark:text-zinc-500 flex-shrink-0">
                   {msgData?.totalCount ?? 0} 則訊息
                 </span>
+                <button
+                  onClick={() => msgRefetch()}
+                  disabled={msgFetching}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer flex-shrink-0"
+                >
+                  <svg className={`w-3.5 h-3.5 ${msgFetching ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {msgFetching ? '更新中' : '刷新'}
+                </button>
               </div>
 
               {/* 訊息列表（升序，舊訊息在上方） */}
