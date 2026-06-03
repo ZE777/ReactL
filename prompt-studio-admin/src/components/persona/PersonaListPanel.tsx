@@ -1,4 +1,5 @@
-﻿import { useMutation, useQueryClient } from '@tanstack/react-query'
+﻿import { useMemo } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
 import { Link } from 'react-router-dom'
 import type { Persona } from '../../types/persona'
@@ -32,11 +33,12 @@ export default function PersonaListPanel({ selectedId, onSelect, onNew, personas
     },
   })
 
-  const builtin = personas.filter(p => p.isBuiltin)
-  const custom = personas.filter(p => !p.isBuiltin)
+  // userId == null 才是真正的系統預設，isBuiltin 改為「公開於前台」旗標
+  const builtin = useMemo(() => personas.filter(p => p.userId == null), [personas])
+  const custom = useMemo(() => personas.filter(p => p.userId != null), [personas])
 
   return (
-    <div className="w-80 flex-shrink-0 border-r border-slate-200 dark:border-zinc-800 flex flex-col overflow-hidden">
+    <div className="w-full flex flex-col overflow-hidden h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-400 dark:text-zinc-400 uppercase tracking-wider">Personas</p>
@@ -53,7 +55,7 @@ export default function PersonaListPanel({ selectedId, onSelect, onNew, personas
                 persona={p}
                 isSelected={selectedId === p.id}
                 onSelect={() => onSelect(p.id)}
-                isBuiltin
+                isSystemBuiltin
               />
             ))}
           </SectionGroup>
@@ -78,7 +80,7 @@ export default function PersonaListPanel({ selectedId, onSelect, onNew, personas
         )}
 
         {custom.length === 0 && (
-          <p className="px-4 py-6 text-sm text-slate-400 dark:text-zinc-400 text-center">尚無自訂 Persona，點右上角新增</p>
+          <p className="px-4 py-6 text-sm text-slate-400 dark:text-zinc-400 text-center">尚無自訂 Persona，點上方「+ 新增」建立第一個</p>
         )}
       </div>
     </div>
@@ -98,7 +100,7 @@ type RowProps = {
   persona: Persona
   isSelected: boolean
   onSelect: () => void
-  isBuiltin?: boolean
+  isSystemBuiltin?: boolean
   isPendingDelete?: boolean
   onDeleteRequest?: () => void
   onDeleteConfirm?: () => void
@@ -106,7 +108,7 @@ type RowProps = {
   isDeleting?: boolean
 }
 
-function PersonaRow({ persona, isSelected, onSelect, isBuiltin, isPendingDelete, onDeleteRequest, onDeleteConfirm, onDeleteCancel, isDeleting }: RowProps) {
+function PersonaRow({ persona, isSelected, onSelect, isSystemBuiltin, isPendingDelete, onDeleteRequest, onDeleteConfirm, onDeleteCancel, isDeleting }: RowProps) {
   return (
     <div
       className={`mx-2 px-3 py-2.5 rounded-lg cursor-pointer group transition-all border ${
@@ -122,9 +124,16 @@ function PersonaRow({ persona, isSelected, onSelect, isBuiltin, isPendingDelete,
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-base flex-shrink-0">{persona.emoji ?? '🤖'}</span>
           <div className="min-w-0">
-            <p className={`text-sm font-medium truncate ${isSelected ? 'text-violet-600 dark:text-violet-300' : 'text-slate-700 dark:text-zinc-200'}`}>
-              {persona.name}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className={`text-sm font-medium truncate ${isSelected ? 'text-violet-600 dark:text-violet-300' : 'text-slate-700 dark:text-zinc-200'}`}>
+                {persona.name}
+              </p>
+              {persona.isBuiltin && !isSystemBuiltin && (
+                <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium">
+                  公開
+                </span>
+              )}
+            </div>
             {persona.currentVersion && (
               <p className="text-sm text-slate-400 dark:text-zinc-400">v{persona.currentVersion}</p>
             )}
@@ -134,40 +143,46 @@ function PersonaRow({ persona, isSelected, onSelect, isBuiltin, isPendingDelete,
         <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
           {isPendingDelete ? (
             <>
-              <button
+              {/* autoFocus：條件渲染時此按鈕是全新掛載，焦點自動移入讓鍵盤可直接確認 */}
+              <Button
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+                size="sm"
+                variant="danger"
+                loading={isDeleting}
                 onClick={onDeleteConfirm}
-                disabled={isDeleting}
-                className="px-2 py-0.5 rounded text-sm text-white bg-red-500 hover:bg-red-400 disabled:opacity-50 transition-colors cursor-pointer"
               >
                 確認
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={isDeleting}
                 onClick={onDeleteCancel}
-                className="px-2 py-0.5 rounded text-sm text-slate-400 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : (
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              {!isBuiltin && (
+            <div className="flex items-center gap-1">
+              {!isSystemBuiltin && (
                 <Link
                   to={`/personas/${persona.id}/versions`}
                   aria-label="版本歷史"
-                  className="p-1 rounded text-slate-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
                   title="版本歷史"
+                  className="w-7 h-7 rounded-md flex items-center justify-center text-violet-600 dark:text-violet-500 bg-violet-300/70 dark:bg-violet-600/30 hover:bg-violet-400/70 dark:hover:bg-violet-600/50 dark:hover:text-violet-400 transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </Link>
               )}
-              {!isBuiltin && onDeleteRequest && (
+              {!isSystemBuiltin && onDeleteRequest && (
                 <button
                   onClick={onDeleteRequest}
-                  className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
                   title="刪除"
                   aria-label="刪除"
+                  className="w-7 h-7 rounded-md flex items-center justify-center text-red-600 dark:text-red-500 bg-red-300/70 dark:bg-red-600/30 hover:bg-red-400/70 dark:hover:bg-red-600/50 dark:hover:text-red-400 transition-colors cursor-pointer"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

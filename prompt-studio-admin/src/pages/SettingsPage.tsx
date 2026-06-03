@@ -33,8 +33,8 @@ type FieldRowProps = { label: string; hint?: string; children: React.ReactNode }
 
 function FieldRow({ label, hint, children }: FieldRowProps) {
   return (
-    <div className="flex items-start gap-6 py-4 border-b border-dashed border-slate-200/70 dark:border-zinc-700/25 last:border-0 last:pb-0 first:pt-0">
-      <div className="w-36 flex-shrink-0">
+    <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-6 py-4 border-b border-dashed border-slate-200/70 dark:border-zinc-700/25 last:border-0 last:pb-0 first:pt-0">
+      <div className="sm:w-36 sm:flex-shrink-0">
         <p className="text-base text-slate-600 dark:text-zinc-400">{label}</p>
         {hint && <p className="text-sm text-slate-400 dark:text-zinc-400 mt-0.5">{hint}</p>}
       </div>
@@ -95,7 +95,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto"><div className="p-6 lg:p-8 max-w-2xl flex flex-col gap-6">
+    <div className="h-full overflow-y-auto"><div className="p-4 sm:p-6 lg:p-8 max-w-2xl flex flex-col gap-6">
       <Section title="帳號資訊" description="管理你的個人資料">
         <form onSubmit={profileForm.handleSubmit(d => profileMutation.mutate(d))}>
           <FieldRow label="顯示名稱">
@@ -116,7 +116,7 @@ export default function SettingsPage() {
             />
           </FieldRow>
           <div className="flex justify-end pt-2">
-            <Button size="sm" type="submit" loading={profileMutation.isPending}>儲存變更</Button>
+            <Button size="sm" type="submit" loading={profileMutation.isPending} disabled={!profileForm.formState.isDirty}>儲存變更</Button>
           </div>
         </form>
       </Section>
@@ -169,9 +169,8 @@ export default function SettingsPage() {
                 </div>
                 {pwForm.formState.errors.confirmPassword && <p className="text-sm text-red-500 dark:text-red-400">{pwForm.formState.errors.confirmPassword.message}</p>}
               </div>
-
               <div className="flex justify-end">
-                <Button size="sm" type="submit" loading={pwMutation.isPending}>更新密碼</Button>
+                <Button size="sm" type="submit" loading={pwMutation.isPending} disabled={!pwForm.formState.isDirty}>更新密碼</Button>
               </div>
             </div>
           </FieldRow>

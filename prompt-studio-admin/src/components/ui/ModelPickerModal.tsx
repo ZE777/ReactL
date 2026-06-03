@@ -185,18 +185,18 @@ export default function ModelPickerModal({
           )}
 
           {error && (
-            <div className="py-6 text-center">
+            <div className="py-4 px-4 text-center border border-red-400 dark:border-red-500 rounded-lg">
               <p className="text-sm text-red-500 dark:text-red-400">無法載入模型列表，請稍後再試</p>
             </div>
           )}
 
-          {providers && providers.length === 0 && (
+          {!error && providers && providers.length === 0 && (
             <div className="py-6 text-center">
               <p className="text-sm text-slate-400 dark:text-zinc-400">目前沒有可用的 AI 供應商</p>
             </div>
           )}
 
-          {providers && providers.length > 0 && (
+          {!error && providers && providers.length > 0 && (
             <div className="space-y-4">
               {providers.map((provider, providerIdx) => (
                 <div key={provider.id}>

@@ -42,7 +42,12 @@ const monitorNavItems = [
 
 const MAX_VISIBLE_CONVERSATIONS = 5
 
-export default function ConversationSidebar() {
+type Props = {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export default function ConversationSidebar({ isOpen, onClose }: Props) {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -118,7 +123,23 @@ export default function ConversationSidebar() {
   const avatarLetter = displayName.charAt(0).toUpperCase()
 
   return (
-    <aside className="w-56 bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800 flex flex-col h-screen flex-shrink-0">
+    <>
+      {/* 手機遮罩：點擊關閉 sidebar */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 flex flex-col h-screen w-56 flex-shrink-0
+        bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800
+        transition-transform duration-300
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:relative lg:translate-x-0 lg:z-auto
+      `}>
       {/* Logo */}
       <div className="px-4 py-4 border-b border-slate-200 dark:border-zinc-800">
         <div className="flex items-center gap-2">
@@ -275,5 +296,6 @@ export default function ConversationSidebar() {
         </div>
       </div>
     </aside>
+    </>
   )
 }

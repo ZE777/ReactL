@@ -17,9 +17,10 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await api.post('/api/auth/login', { email, password })
+      await api.post('/auth/login', { email, password })
       // JWT 由後端寫入 HttpOnly Cookie，前端直接導向後台
-      window.location.href = 'http://localhost:5173'
+      const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'http://localhost:5173'
+      window.location.href = adminUrl
     } catch (err) {
       setError(err instanceof Error ? err.message : '登入失敗，請確認帳號密碼')
     } finally {
@@ -49,6 +50,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 autoComplete="email"
+                maxLength={254}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="admin@example.com"
@@ -64,6 +66,7 @@ export default function LoginPage() {
                 type="password"
                 required
                 autoComplete="current-password"
+                maxLength={128}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"

@@ -15,6 +15,8 @@ export type Persona = {
   promptSections?: PromptSections
   currentVersion?: number
   isBuiltin?: boolean
+  /** null 表示系統預設 Persona，有值表示使用者自訂 */
+  userId?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -22,12 +24,13 @@ export type Persona = {
 export type PersonaFormData = {
   name: string
   emoji?: string
+  isBuiltin: boolean
   promptSections: PromptSections
 }
 
 export type PersonaVersion = {
   id: string
-  personaId: string
+  personaId?: string
   version: number
   systemPrompt: string
   promptSections?: PromptSections

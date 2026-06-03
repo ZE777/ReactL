@@ -522,17 +522,17 @@
 # Project C：AI Prompt Studio 實作進度
 
 > 對應規劃文件：[AIPromptStudio規劃.md](../需求規劃/AIPromptStudio規劃.md)  
-> 最後更新：2026-05-28
+> 最後更新：2026-06-02
 
 ## 實作進度統計
 
 | 指標 | 數值 |
 |------|------|
-| ✅ 已完成 | 18 |
-| 📖 進行中 | 6 |
-| ⬜ 未開始 | 9 |
-| **總計功能項** | **33** |
-| **完成率** | **18 / 33　≈ 54.5%** |
+| ✅ 已完成 | 30 |
+| 📖 進行中 | 2 |
+| ⬜ 未開始 | 4 |
+| **總計功能項** | **36** |
+| **完成率** | **30 / 36　≈ 83.3%** |
 
 > 每完成一個功能項請更新上方統計數字。
 
@@ -543,16 +543,16 @@
 | 模組 | 功能數 | 已完成 | 對應學習階段 |
 |------|--------|--------|-------------|
 | A. 基礎建置 | 4 | 4 | 第二～五階段 |
-| B. 聊天功能 | 5 | 3 | 第三、四階段 |
-| C. Persona 管理 | 5 | 5 | 第三、四階段 |
+| B. 聊天功能 | 5 | 5 | 第三、四階段 |
+| C. Persona 管理 | 6 | 6 | 第三、四階段 |
 | D. Prompt 模板 | 4 | 2 | 第四階段 |
-| E. 統計儀表板 | 2 | 0 | 第四、五階段 |
-| F. 多模型切換 | 2 | 0 | 第四階段 |
-| G. 前台 Next.js | 3 | 0 | 第五階段 |
+| E. 統計儀表板 | 2 | 1 | 第四、五階段 |
+| F. 多模型切換 | 2 | 2 | 第四階段 |
+| G. 前台 Next.js | 5 | 5 | 第五階段 |
 | H. 部署與 CI/CD | 1 | 0 | 第十一階段 |
 | I. 外部平台整合 | 4 | 2 | 後端外包 + 第五階段 |
-| J. Prompt Builder | 3 | 2 | 第四階段 |
-| **合計** | **33** | **18** | |
+| J. Prompt Builder | 3 | 3 | 第四階段 |
+| **合計** | **36** | **30** | |
 
 ---
 
@@ -570,20 +570,21 @@
 | # | 功能 | 狀態 | 對應學習 | 備註 |
 |---|------|------|----------|------|
 | B1 | 對話列表（sidebar）| ✅ 完成 | 第三階段 | ConversationSidebar URL routing、navigate、seeding guard |
-| B2 | 聊天訊息輸入與送出 | ✅ 完成 | 第二階段 Part 7 | ChatPage mock streaming、stop 控制、streamTimerRef |
-| B3 | SSE 串流 AI 回應顯示 | 📖 進行中 | 第四階段 | 目前為 mock setTimeout，待接真實 SSE API |
-| B4 | 對話 CRUD（新增、刪除、重新命名）| ✅ 完成 | 第四階段 | Zustand store + ConversationsPage 刪除 |
-| B5 | Markdown 渲染 | ⬜ 未開始 | 第七階段 | react-markdown |
+| B2 | 聊天訊息輸入與送出 | ✅ 完成 | 第二階段 Part 7 | ChatPage stop 控制、AbortController |
+| B3 | SSE 串流 AI 回應顯示 | ✅ 完成 | 第四階段 | 真實 SSE 串接完成，多提供商（Groq/Mistral/Cerebras/SambaNova） |
+| B4 | 對話 CRUD（新增、刪除、重新命名）| ✅ 完成 | 第四階段 | Zustand store + ConversationsPage，含批次刪除、釘選、匯出 .md |
+| B5 | Markdown 渲染 | ✅ 完成 | 第七階段 | admin ChatPage 已整合 Markdown 渲染 |
 
 ## C. Persona 管理
 
 | # | 功能 | 狀態 | 對應學習 | 備註 |
 |---|------|------|----------|------|
-| C1 | Persona 列表載入 | ✅ 完成 | 第四階段 | PersonaListPanel + useQuery + inline 刪除確認 |
+| C1 | Persona 列表載入 | ✅ 完成 | 第四階段 | PersonaListPanel + useQuery，系統/自訂分組（依 userId==null） |
 | C2 | Persona 選擇器 | ✅ 完成 | 第二階段 Part 1-2 | SelectorPill 整合至 ChatPage，Persona + 模型切換 |
 | C3 | Persona CRUD 表單 | ✅ 完成 | 第二階段 Part 7 | PersonaForm RHF + useMutation + PromptBuilder 整合 |
-| C4 | Persona 卡片元件 | ✅ 完成 | 第二階段 Part 2 | PersonaListPanel 內建 card 樣式，hover 操作 |
+| C4 | Persona 卡片元件 | ✅ 完成 | 第二階段 Part 2 | PersonaListPanel 內建 card 樣式，公開徽章（emerald badge） |
 | C5 | Persona Prompt 版本管理 | ✅ 完成 | 第四階段 | PersonaVersionsPage 版本列表 + 還原 + 展開 Prompt |
+| C6 | Persona 公開前台設定（isBuiltin toggle）| ✅ 完成 | 第四階段 | toggle UI + 後端 isBuiltin 欄位，控制是否顯示於前台聊天室 |
 
 ## D. Prompt 模板
 
@@ -598,29 +599,31 @@
 
 | # | 功能 | 狀態 | 對應學習 | 備註 |
 |---|------|------|----------|------|
-| E1 | 使用量統計圖表 | 📖 進行中 | 第四階段 | StatsPage mock bar chart，recharts 整合待 V2 |
+| E1 | 使用量統計（Token 用量）| ✅ 完成 | 第四階段 | StatsPage + MonitorPage，後端每日 UPSERT，Admin/Web source 分開 |
 | E2 | 匯出報表 | ⬜ 未開始 | 第四階段 | |
 
 ## F. 多模型切換（免費 API）
 
 | # | 功能 | 狀態 | 對應學習 | 備註 |
 |---|------|------|----------|------|
-| F1 | 模型選擇器（Gemini / Groq Llama 切換）| 📖 進行中 | 第三階段 | SelectorPill + SettingsPage UI 完成，待 Zustand 接 API |
-| F2 | 後端 IModelProvider 介面 + 各 Provider 實作 | ⬜ 未開始 | 後端階段 | Gemini Flash、Groq Llama 3，僅免費方案 |
+| F1 | 模型選擇器（切換模型）| ✅ 完成 | 第三階段 | ModelPickerModal 完成，支援 10 個免費模型 |
+| F2 | 後端多 Provider 介面 + 各 Provider 實作 | ✅ 完成 | 後端階段 | OpenAiService 多提供商，4 個 API Key 已設定（2026-05-29） |
 
 ## G. 前台 Next.js（prompt-studio-web）
 
 | # | 功能 | 狀態 | 對應學習 | 備註 |
 |---|------|------|----------|------|
-| F1 | Next.js 專案初始化 + App Router | ⬜ 未開始 | 第五階段 5-B | |
-| F2 | 分享頁（公開 Prompt 模板展示）| ⬜ 未開始 | 第五階段 5-B | RSC 資料抓取 |
-| F3 | SEO metadata + OG 設定 | ⬜ 未開始 | 第八階段 03 | |
+| G1 | Next.js 16 專案初始化 + App Router | ✅ 完成 | 第五階段 5-B | Landing / About / Login / Chat / Share 頁面全部完成 |
+| G2 | 公開對話分享頁（SSR + OG metadata）| ✅ 完成 | 第五階段 5-B | `generateMetadata`、已刪除顯示封存 banner、`cache: no-store` |
+| G3 | SEO metadata + OG 設定 | ✅ 完成 | 第八階段 03 | share 頁動態 OG title/description，Landing 靜態 metadata |
+| G4 | 前台聊天室（真實 SSE + Persona 選擇）| ✅ 完成 | 第五階段 5-B | `POST /public/chat/stream`，`GET /public/personas`，`?personaId=xxx` |
+| G5 | 前台 RWD + Loading Skeleton + Error Boundary | ✅ 完成 | 第十階段 | 手機 Bottom Sheet、`h-[100dvh]`、3 個 Skeleton、全域 Error Boundary |
 
 ## H. 部署與 CI/CD
 
 | # | 功能 | 狀態 | 對應學習 | 備註 |
 |---|------|------|----------|------|
-| H1 | GitHub Actions 自動測試 + 部署 | ⬜ 未開始 | 第十一階段 | |
+| H1 | 部署（IIS + PM2）| ⬜ 未開始 | 第十一階段 | IIS（API）+ PM2（Next.js）尚未進行 |
 
 ## I. 外部平台整合（V3）
 
@@ -636,7 +639,7 @@
 | # | 功能 | 狀態 | 對應學習 | 備註 |
 |---|------|------|----------|------|
 | J1 | 結構化表單（角色/背景/任務/格式/限制/範例 → 自動組裝）| ✅ 完成 | 第七階段 Skills | PromptBuilder 6 區塊 + assembleSystemPrompt 純函式 |
-| J2 | AI 強化按鈕（白話描述 → Groq 改寫 System Prompt）| 📖 進行中 | 第四階段 | mock toast 已佔位，待接真實 Groq API |
+| J2 | AI 強化按鈕（System Prompt 各區塊 Groq 改寫）| ✅ 完成 | 第四階段 | PersonaService.EnhancePromptAsync，後端呼叫 AI 回傳 JSON 分區填入 |
 | J3 | 即時完整度提示（各區塊填寫狀態 + 完整度 %）| ✅ 完成 | 第二階段 Part 5 | CompletenessPanel sticky sidebar，% bar + 逐項檢查 |
 
 ---
@@ -646,6 +649,6 @@
 | 符號 | 意義 |
 |------|------|
 | ⬜ 未開始 | 尚未動工 |
-| 📖 練習中 | 有練習版本，尚未整合進正式流程 |
+| 📖 進行中 | 有基礎版本，尚未全部完成 |
 | 🔧 開發中 | 正在實作 |
 | ✅ 完成 | 功能完整、可運作 |

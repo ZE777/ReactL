@@ -1,7 +1,7 @@
 ﻿import type { ButtonHTMLAttributes } from 'react'
 import Spinner from './Spinner'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-ghost'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-ghost' | 'blue'
 type Size = 'sm' | 'md' | 'icon'
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -11,11 +11,12 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary:   'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-60',
-  secondary: 'bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700',
-  ghost:     'hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200',
-  danger:       'bg-red-600 hover:bg-red-500 text-white disabled:opacity-60',
-  'danger-ghost': 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/50 hover:text-red-700 dark:hover:text-red-300',
+  primary:        'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-60',
+  secondary:      'bg-slate-500/80 dark:bg-zinc-400/30 hover:bg-slate-600 dark:hover:bg-zinc-500 text-white dark:text-white border border-slate-500 dark:border-zinc-600 disabled:opacity-50',
+  ghost:          'bg-slate-300/80 dark:bg-zinc-400/30 text-slate-700 dark:text-white hover:bg-slate-400 dark:hover:bg-zinc-500 hover:text-slate-900',
+  danger:         'bg-red-600 dark:bg-red-700/90 hover:bg-red-500 dark:hover:bg-red-600 text-white font-semibold border border-transparent disabled:opacity-60',
+  'danger-ghost': 'bg-red-400 dark:bg-red-700/90 text-red-900 dark:text-white hover:bg-red-500 dark:hover:bg-red-500 hover:text-white',
+  blue:           'bg-blue-600 dark:bg-blue-600/90 hover:bg-blue-500 text-white disabled:opacity-60',
 }
 
 const sizeClasses: Record<Size, string> = {
@@ -39,7 +40,12 @@ export default function Button({
       className={`font-medium transition-colors cursor-pointer disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >
-      {loading ? <Spinner size="sm" className="mx-auto" /> : children}
+      {loading ? (
+        <span className="inline-flex items-center gap-1.5">
+          <Spinner size="sm" />
+          <span>{children}</span>
+        </span>
+      ) : children}
     </button>
   )
 }

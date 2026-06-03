@@ -10,12 +10,13 @@ export type Message = {
 }
 
 export type Persona = {
-  id: number
+  id: string
   name: string
   emoji?: string
   description?: string
-  systemPrompt?: string
   isBuiltin?: boolean
+  userId?: string | null
+  currentVersion?: number
 }
 
 export type SharedConversation = {
@@ -23,6 +24,8 @@ export type SharedConversation = {
   title: string
   personaName?: string
   personaEmoji?: string
+  personaId?: string
+  isDeleted: boolean
   messages: Message[]
   createdAt: string
   shareSlug: string

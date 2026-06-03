@@ -3,14 +3,19 @@ import { useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
-import 'highlight.js/styles/github.css'
+import { markdownComponents } from '../components/ui/MarkdownComponents'
+import 'highlight.js/styles/github-dark.css'
 import type { AxiosError } from 'axios'
 import api, { unwrap } from '../lib/api'
 import type { ApiError, ApiResponse } from '../types/api'
+import type { PromptTemplate, PromptCategory } from '../types/prompt'
+import { fetchPrompts } from '../api/prompts'
 import { useToast } from '../context/ToastContext'
 import EmptyState from '../components/ui/EmptyState'
 import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
 import Spinner from '../components/ui/Spinner'
+import PageLoading from '../components/ui/PageLoading'
 import ModelPickerModal from '../components/ui/ModelPickerModal'
 import Modal from '../components/ui/Modal'
 
@@ -21,6 +26,7 @@ type MessageItem = {
   tokensIn: number
   tokensOut: number
   createdAt: string
+  truncated?: boolean
 }
 
 type ConversationDetail = {
@@ -55,12 +61,14 @@ export default function ChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const accumulatedRef = useRef('')
+  const truncatedRef = useRef(false)
   /** 防止 conv refetch 覆蓋串流後已更新的本地 messages */
   const msgInitializedRef = useRef(false)
 
   const [showNewConvPicker, setShowNewConvPicker] = useState(false)
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPersonaPicker, setShowPersonaPicker] = useState(false)
+  const [showPromptPicker, setShowPromptPicker] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const blocker = useBlocker(
@@ -81,6 +89,25 @@ export default function ChatPage() {
     enabled: showPersonaPicker || showNewConvPicker,
     staleTime: 5 * 60 * 1000,
   })
+
+  /** Prompt 模板：picker 開啟時抓取，不設 staleTime 確保每次開啟都取得最新資料 */
+  const { data: promptTemplates } = useQuery<PromptTemplate[]>({
+    queryKey: ['prompts'],
+    queryFn: fetchPrompts,
+    enabled: showPromptPicker,
+  })
+
+  const promptUsageMutation = useMutation({
+    mutationFn: (templateId: string) => api.post(`/prompt-templates/${templateId}/use`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['prompts'] }),
+  })
+
+  function handleSelectPrompt(template: PromptTemplate) {
+    setInput(template.content)
+    setShowPromptPicker(false)
+    promptUsageMutation.mutate(template.id)
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
 
   // C-14：對話不存在（404）時自動導回列表
   useEffect(() => {
@@ -237,9 +264,12 @@ export default function ChatPage() {
             if (chunk.type === 'delta' && chunk.content) {
               accumulatedRef.current += chunk.content
               setStreamingContent(accumulatedRef.current)
+            } else if (chunk.type === 'truncated') {
+              truncatedRef.current = true
             } else if (chunk.type === 'done') {
               // accumulatedRef 直後會被清空，先 capture 給 updater closure 使用
               const finalContent = accumulatedRef.current
+              const wasTruncated = truncatedRef.current
               setMessages(prev => [...prev, {
                 id: crypto.randomUUID(),
                 role: 'assistant' as const,
@@ -247,10 +277,12 @@ export default function ChatPage() {
                 tokensIn: chunk.usage?.tokensIn ?? 0,
                 tokensOut: chunk.usage?.tokensOut ?? 0,
                 createdAt: new Date().toISOString(),
+                truncated: wasTruncated,
               }])
               setStreamingContent('')
               setIsStreaming(false)
               accumulatedRef.current = ''
+              truncatedRef.current = false
               queryClient.invalidateQueries({ queryKey: ['conversations'] })
               setTimeout(() => textareaRef.current?.focus(), 0)
               break outer
@@ -400,13 +432,7 @@ export default function ChatPage() {
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center gap-2 h-full text-slate-400">
-        <Spinner size="sm" /> 載入對話...
-      </div>
-    )
-  }
+  if (isLoading) return <PageLoading text="載入對話" />
 
   if (error) {
     return (
@@ -423,21 +449,21 @@ export default function ChatPage() {
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden">
       {/* 對話資訊列 */}
-      <div className="flex-shrink-0 px-6 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-3">
-        <span className="text-sm text-slate-400 dark:text-zinc-400">Persona：</span>
+      <div className="flex-shrink-0 px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-2 sm:gap-3">
+        <span className="hidden sm:inline text-sm text-slate-400 dark:text-zinc-400 shrink-0">Persona：</span>
         <button
           onClick={() => setShowPersonaPicker(true)}
           title="切換角色"
-          className="hover:opacity-75 transition-opacity"
+          className="hover:opacity-75 transition-opacity shrink-0"
         >
           <InfoPill label={conv?.personaName ?? '無'} color="violet" />
         </button>
 
-        <span className="text-sm text-slate-400 dark:text-zinc-400 ml-auto">模型：</span>
+        <span className="hidden sm:inline text-sm text-slate-400 dark:text-zinc-400 ml-auto shrink-0">模型：</span>
         <button
           onClick={() => setShowModelPicker(true)}
           title="切換模型"
-          className="hover:opacity-75 transition-opacity"
+          className="hover:opacity-75 transition-opacity ml-auto sm:ml-0 shrink-0"
         >
           <InfoPill label={conv?.modelType ?? ''} color="emerald" />
         </button>
@@ -447,7 +473,7 @@ export default function ChatPage() {
           onClick={() => setShowDeleteModal(true)}
           disabled={deleteMutation.isPending}
           title="刪除此對話"
-          className="w-7 h-7 rounded-md flex items-center justify-center text-red-500 dark:text-red-400 bg-red-100 dark:bg-red-900/40 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors disabled:opacity-40 ml-1"
+          className="w-7 h-7 rounded-md flex items-center justify-center text-red-600 dark:text-red-500 bg-red-300/70 dark:bg-red-600/30 hover:bg-red-400/70 dark:hover:bg-red-600/50 dark:hover:text-red-400 transition-colors disabled:opacity-40 ml-1"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -456,7 +482,7 @@ export default function ChatPage() {
       </div>
 
       {/* 訊息區 */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 space-y-6">
         {visibleMessages.length === 0 && !isStreaming && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
             <p className="text-base text-slate-400 dark:text-zinc-400">這是一個全新的對話</p>
@@ -469,8 +495,10 @@ export default function ChatPage() {
             key={msg.id}
             role={msg.role as 'user' | 'assistant'}
             content={msg.content}
+            createdAt={msg.createdAt}
             isLastAssistant={msg.id === lastAssistantMsgId && !isStreaming}
             onRegenerate={msg.id === lastAssistantMsgId && !isStreaming ? handleRegenerate : undefined}
+            truncated={msg.truncated}
           />
         ))}
 
@@ -505,7 +533,19 @@ export default function ChatPage() {
             disabled={isStreaming}
             className="flex-1 px-4 py-3 text-base bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-slate-700 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-500 outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all resize-none disabled:opacity-50"
           />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 items-stretch">
+            {/* Prompt 模板選用按鈕 */}
+            <button
+              onClick={() => setShowPromptPicker(true)}
+              disabled={isStreaming}
+              title="選用 Prompt 模板"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-lg text-violet-600 dark:text-violet-500 bg-violet-300/70 dark:bg-violet-600/30 hover:bg-violet-400/70 dark:hover:bg-violet-600/50 dark:hover:text-violet-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>模板</span>
+            </button>
             {isStreaming ? (
               <Button variant="secondary" size="sm" onClick={handleStop} className="text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20">
                 ■ 停止
@@ -537,6 +577,15 @@ export default function ChatPage() {
           patchMutation.mutate({ modelType: model })
         }}
       />
+
+      {/* Prompt 模板 Picker */}
+      {showPromptPicker && (
+        <PromptPickerOverlay
+          templates={promptTemplates ?? []}
+          onSelect={handleSelectPrompt}
+          onClose={() => setShowPromptPicker(false)}
+        />
+      )}
 
       {/* 切換角色 Picker */}
       {showPersonaPicker && (
@@ -617,12 +666,14 @@ function AvatarDot({ role }: { role: 'user' | 'assistant' }) {
 type MessageBubbleProps = {
   role: 'user' | 'assistant'
   content: string
+  createdAt?: string
   isStreaming?: boolean
   isLastAssistant?: boolean
   onRegenerate?: () => void
+  truncated?: boolean
 }
 
-function MessageBubble({ role, content, isStreaming, isLastAssistant, onRegenerate }: MessageBubbleProps) {
+function MessageBubble({ role, content, createdAt, isStreaming, isLastAssistant, onRegenerate, truncated }: MessageBubbleProps) {
   const isUser = role === 'user'
   const [copied, setCopied] = useState(false)
   const { push: toast } = useToast()
@@ -667,18 +718,33 @@ function MessageBubble({ role, content, isStreaming, isLastAssistant, onRegenera
               prose-pre:bg-slate-100 dark:prose-pre:bg-zinc-800 prose-pre:rounded-lg
               prose-code:text-violet-600 dark:prose-code:text-violet-400
               prose-code:before:content-none prose-code:after:content-none">
-              <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
+              <ReactMarkdown rehypePlugins={[rehypeHighlight]} components={markdownComponents}>{content}</ReactMarkdown>
             </div>
           )}
         </div>
 
+        {truncated && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-600 dark:text-amber-400">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            回應已被 token 上限截斷，可重新產生或調高後端 MaxTokens 設定
+          </div>
+        )}
+
         {!isStreaming && (
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* 時間 */}
+            {createdAt && (
+              <span className="text-xs text-slate-400 dark:text-zinc-500 px-1">
+                {new Date(createdAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
             {/* 複製按鈕 */}
             <button
               onClick={handleCopy}
               title="複製訊息"
-              className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
+              className="ml-auto flex items-center gap-1.5 text-sm px-2.5 py-1 rounded text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
             >
               {copied ? (
                 <>
@@ -712,6 +778,101 @@ function MessageBubble({ role, content, isStreaming, isLastAssistant, onRegenera
             )}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── PromptPickerOverlay ───────────────────────────────────────────────────────
+
+const PROMPT_CATEGORIES: PromptCategory[] = ['程式', '翻譯', '寫作', '其他']
+
+const categoryColor: Record<PromptCategory, 'violet' | 'blue' | 'green' | 'amber'> = {
+  '程式': 'violet', '翻譯': 'blue', '寫作': 'green', '其他': 'amber',
+}
+
+type PromptPickerOverlayProps = {
+  templates: PromptTemplate[]
+  onSelect: (template: PromptTemplate) => void
+  onClose: () => void
+}
+
+function PromptPickerOverlay({ templates, onSelect, onClose }: PromptPickerOverlayProps) {
+  const [activeCategory, setActiveCategory] = useState<PromptCategory | 'all'>('all')
+
+  const filtered = activeCategory === 'all'
+    ? templates
+    : templates.filter(t => t.category === activeCategory)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4">
+      <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col" style={{ maxHeight: '70vh' }}>
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100 dark:border-zinc-700/25 flex-shrink-0">
+          <div>
+            <h2 className="text-base font-semibold text-slate-800 dark:text-zinc-100">選用 Prompt 模板</h2>
+            <p className="text-sm text-slate-400 dark:text-zinc-400 mt-0.5">點選後自動填入輸入框</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="mt-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* 分類篩選 */}
+        <div className="flex gap-2 px-6 py-3 border-b border-slate-100 dark:border-zinc-700/25 flex-shrink-0 flex-wrap">
+          {(['all', ...PROMPT_CATEGORIES] as const).map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-3 py-1 text-sm rounded-full transition-colors cursor-pointer ${
+                activeCategory === cat
+                  ? 'bg-violet-500 text-white'
+                  : 'bg-slate-200/80 dark:bg-zinc-700/50 text-slate-600 dark:text-zinc-400 hover:bg-slate-300 dark:hover:bg-zinc-600'
+              }`}
+            >
+              {cat === 'all' ? '全部' : cat}
+            </button>
+          ))}
+        </div>
+
+        {/* 模板列表 */}
+        <div className="overflow-y-auto flex-1 p-3 space-y-2">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-slate-400 dark:text-zinc-500 text-center py-8">此分類尚無模板</p>
+          ) : (
+            filtered.map(t => (
+              <button
+                key={t.id}
+                onClick={() => onSelect(t)}
+                className="w-full text-left px-4 py-3 rounded-xl border border-slate-100 dark:border-zinc-800 hover:border-violet-300 dark:hover:border-violet-700 hover:bg-violet-50/50 dark:hover:bg-violet-900/10 transition-all group"
+              >
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <span className="text-sm font-medium text-slate-700 dark:text-zinc-200 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors">
+                    {t.title}
+                  </span>
+                  <Badge color={categoryColor[t.category]} size="sm">{t.category}</Badge>
+                </div>
+                <p className="text-sm text-slate-400 dark:text-zinc-500 line-clamp-2">{t.content}</p>
+                {t.tags.length > 0 && (
+                  <div className="flex gap-1 mt-2 flex-wrap">
+                    {t.tags.map(tag => (
+                      <span key={tag} className="text-xs text-slate-400 dark:text-zinc-500 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </button>
+            ))
+          )}
+        </div>
       </div>
     </div>
   )

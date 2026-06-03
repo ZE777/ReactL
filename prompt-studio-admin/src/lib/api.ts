@@ -10,6 +10,9 @@ const api = axios.create({
 
 /** 解包後端 ApiResponse<T> 包裝，取出 data 欄位 */
 export function unwrap<T>(response: AxiosResponse<ApiResponse<T>>): T {
+  if (response.data.data === undefined) {
+    throw new Error(`API response missing data field: ${response.config.url}`)
+  }
   return response.data.data as T
 }
 

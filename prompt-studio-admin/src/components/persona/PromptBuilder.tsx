@@ -1,5 +1,6 @@
-﻿import { useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import type { PromptSections } from '../../types/persona'
+import { useToast } from '../../context/ToastContext'
 import Textarea from '../ui/Textarea'
 import Button from '../ui/Button'
 
@@ -47,22 +48,30 @@ type Props = {
   onChange: (v: PromptSections) => void
   onEnhance?: () => void
   isEnhancing?: boolean
+  sectionErrors?: Partial<Record<keyof PromptSections, string>>
+  enhancedKeys?: Set<keyof PromptSections>
+  onSectionBlur?: (key: keyof PromptSections) => void
 }
 
-export default function PromptBuilder({ value, onChange, onEnhance, isEnhancing }: Props) {
+export default function PromptBuilder({ value, onChange, onEnhance, isEnhancing, sectionErrors, enhancedKeys, onSectionBlur }: Props) {
+  const { push: toast } = useToast()
   const [showPreview, setShowPreview] = useState(false)
   const [copied, setCopied] = useState(false)
-  const assembled = assembleSystemPrompt(value)
-  const { score, items } = calcCompleteness(value)
+  const assembled = useMemo(() => assembleSystemPrompt(value), [value])
+  const { score, items } = useMemo(() => calcCompleteness(value), [value])
 
   function setField(key: keyof PromptSections, v: string) {
     onChange({ ...value, [key]: v })
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(assembled)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1800)
+    try {
+      await navigator.clipboard.writeText(assembled)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      toast('error', '複製失敗，請手動選取文字')
+    }
   }
 
   return (
@@ -71,6 +80,15 @@ export default function PromptBuilder({ value, onChange, onEnhance, isEnhancing 
       <div className="flex-1 min-w-0 flex flex-col gap-3">
         <div className="flex items-center gap-2 mb-0.5">
           <p className="text-sm font-semibold text-slate-400 dark:text-zinc-400 uppercase tracking-wider">Prompt Builder</p>
+          {isEnhancing && (
+            <span className="text-sm font-semibold text-violet-600 dark:text-violet-400 flex items-center gap-1.5 bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 rounded-md">
+              <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" strokeWidth="2.5" className="stroke-violet-200 dark:stroke-violet-800" />
+                <circle cx="12" cy="12" r="9" strokeWidth="2.5" strokeDasharray="18 38" strokeLinecap="round" className="stroke-violet-600 dark:stroke-violet-400" />
+              </svg>
+              AI 強化中…
+            </span>
+          )}
           <div className="flex-1 h-px bg-slate-200 dark:bg-zinc-700" />
         </div>
 
@@ -87,8 +105,12 @@ export default function PromptBuilder({ value, onChange, onEnhance, isEnhancing 
               <Textarea
                 value={value[s.key] ?? ''}
                 onChange={e => setField(s.key, e.target.value)}
+                onBlur={() => onSectionBlur?.(s.key)}
                 placeholder={s.placeholder}
                 rows={s.key === 'examples' ? 3 : 2}
+                disabled={isEnhancing}
+                error={sectionErrors?.[s.key]}
+                className={enhancedKeys?.has(s.key) ? 'ring-2 ring-amber-400/60 border-amber-300 dark:border-amber-600' : ''}
               />
             </div>
           </div>
@@ -111,7 +133,8 @@ export default function PromptBuilder({ value, onChange, onEnhance, isEnhancing 
               <button
                 type="button"
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                disabled={isEnhancing}
+                className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded bg-slate-300/80 dark:bg-zinc-400/30 text-slate-800 dark:text-white hover:bg-slate-400 dark:hover:bg-zinc-500 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {copied ? (
                   <>
@@ -133,7 +156,8 @@ export default function PromptBuilder({ value, onChange, onEnhance, isEnhancing 
             <button
               type="button"
               onClick={() => setShowPreview(v => !v)}
-              className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+              disabled={isEnhancing}
+              className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded bg-slate-300/80 dark:bg-zinc-400/30 text-slate-800 dark:text-white hover:bg-slate-400 dark:hover:bg-zinc-500 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {showPreview ? (
                 <>
@@ -197,9 +221,10 @@ function CompletenessPanel({ score, items }: { score: number; items: CompletItem
       <div className="flex flex-col gap-1.5">
         {items.map(item => (
           <div key={item.key} className="flex items-center gap-2">
-            <span className="text-sm">
-              {item.filled ? '✅' : item.required ? '⚠️' : '❌'}
+            <span className={`text-sm ${item.filled ? 'text-emerald-500' : 'text-red-400'}`} aria-hidden="true">
+              {item.filled ? '●' : '○'}
             </span>
+            <span className="sr-only">{item.filled ? '已填寫' : '未填寫'}</span>
             <span className={`text-sm ${item.filled ? 'text-slate-600 dark:text-zinc-400' : 'text-slate-400 dark:text-zinc-400'}`}>
               {item.label}
             </span>

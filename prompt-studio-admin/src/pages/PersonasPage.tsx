@@ -5,7 +5,8 @@ import { fetchPersonas, fetchPersonaDetail } from '../api/personas'
 import PersonaListPanel from '../components/persona/PersonaListPanel'
 import PersonaForm from '../components/persona/PersonaForm'
 import EmptyState from '../components/ui/EmptyState'
-import Spinner from '../components/ui/Spinner'
+import PageLoading from '../components/ui/PageLoading'
+import PageError from '../components/ui/PageError'
 import Modal from '../components/ui/Modal'
 
 export default function PersonasPage() {
@@ -19,7 +20,7 @@ export default function PersonasPage() {
   })
 
   const { data: personaDetail, isLoading: isDetailLoading } = useQuery<Persona>({
-    queryKey: ['personas', selectedId],
+    queryKey: ['persona-detail', selectedId],
     queryFn: () => fetchPersonaDetail(selectedId!),
     enabled: selectedId != null,
   })
@@ -32,18 +33,8 @@ export default function PersonasPage() {
     setSelectedId(id)
   }
 
-  if (isPersonasLoading) return (
-    <div className="flex items-center justify-center h-full gap-2 text-slate-400">
-      <Spinner size="sm" /> 載入 Persona...
-    </div>
-  )
-
-  if (personasError) return (
-    <div className="flex flex-col items-center justify-center h-full gap-3 text-zinc-500">
-      <p className="text-base">載入 Persona 列表失敗</p>
-      <button onClick={() => refetchPersonas()} className="text-sm text-violet-400 hover:text-violet-300">重新載入</button>
-    </div>
-  )
+  if (isPersonasLoading) return <PageLoading text="載入 Persona" />
+  if (personasError) return <PageError title="載入 Persona 列表失敗" onRetry={refetchPersonas} />
 
   if (personas?.length === 0) return (
     <>
@@ -77,23 +68,38 @@ export default function PersonasPage() {
   return (
     <>
       <div className="absolute inset-0 flex overflow-hidden">
-        <PersonaListPanel
-          selectedId={selectedId}
-          onSelect={handleSelect}
-          onNew={handleNew}
-          personas={personas ?? []}
-          pendingDeleteId={pendingDeleteId}
-          onPendingDeleteChange={setPendingDeleteId}
-        />
+        {/* 清單面板：desktop 固定左側；mobile 無選取時全寬，有選取時隱藏 */}
+        <div className={`${selectedId ? 'hidden lg:flex' : 'flex'} w-full lg:w-80 lg:flex-shrink-0 flex-col border-r border-slate-200 dark:border-zinc-800 overflow-hidden`}>
+          <PersonaListPanel
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            onNew={handleNew}
+            personas={personas ?? []}
+            pendingDeleteId={pendingDeleteId}
+            onPendingDeleteChange={setPendingDeleteId}
+          />
+        </div>
 
-        <div className="flex-1 overflow-y-auto">
+        {/* 表單面板：desktop 永遠顯示；mobile 只在有選取時顯示 */}
+        <div className={`${selectedId ? 'flex' : 'hidden lg:flex'} flex-1 flex-col overflow-y-auto`}>
+          {/* mobile 返回按鈕 */}
+          {selectedId && (
+            <button
+              onClick={() => setSelectedId(null)}
+              className="lg:hidden flex items-center gap-1.5 px-4 py-3 text-sm text-violet-600 dark:text-violet-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-800 transition-colors cursor-pointer flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              返回角色列表
+            </button>
+          )}
+
           {selectedId != null ? (
             isDetailLoading ? (
-              <div className="flex items-center justify-center h-full gap-2 text-slate-400 dark:text-zinc-400">
-                <Spinner size="sm" /> 載入中...
-              </div>
+              <PageLoading />
             ) : (
-              <div className={`p-6 max-w-6xl mx-auto ${pendingDeleteId != null && pendingDeleteId === selectedId ? 'pointer-events-none opacity-50' : ''}`}>
+              <div className={`p-4 sm:p-6 max-w-6xl mx-auto w-full ${pendingDeleteId != null && pendingDeleteId === selectedId ? 'pointer-events-none opacity-50' : ''}`}>
                 <PersonaForm
                   persona={personaDetail}
                   onSuccess={() => {}}

@@ -3,10 +3,13 @@ import type { ApiResponse } from '../types/api'
 import type { Persona } from '../types/persona'
 import type { PromptSections } from '../types/persona'
 
+function isString(v: unknown): v is string { return typeof v === 'string' }
+
 function parsePersonaSections(persona: Persona): Persona {
-  if (persona.promptSections && typeof persona.promptSections === 'string') {
+  // 後端有時以 JSON 字串形式回傳 promptSections（已知後端設計問題）
+  if (isString(persona.promptSections)) {
     try {
-      return { ...persona, promptSections: JSON.parse(persona.promptSections as unknown as string) as PromptSections }
+      return { ...persona, promptSections: JSON.parse(persona.promptSections) as PromptSections }
     } catch {
       return { ...persona, promptSections: undefined }
     }
