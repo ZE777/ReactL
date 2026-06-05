@@ -13,9 +13,9 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 const variantClasses: Record<Variant, string> = {
   primary:        'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-60',
   secondary:      'bg-slate-500/80 dark:bg-zinc-400/30 hover:bg-slate-600 dark:hover:bg-zinc-500 text-white dark:text-white border border-slate-500 dark:border-zinc-600 disabled:opacity-50',
-  ghost:          'bg-slate-300/80 dark:bg-zinc-400/30 text-slate-700 dark:text-white hover:bg-slate-400 dark:hover:bg-zinc-500 hover:text-slate-900',
+  ghost:          'bg-slate-300/80 dark:bg-zinc-400/30 text-slate-700 dark:text-white hover:bg-slate-400 dark:hover:bg-zinc-500 hover:text-slate-900 disabled:opacity-50',
   danger:         'bg-red-600 dark:bg-red-700/90 hover:bg-red-500 dark:hover:bg-red-600 text-white font-semibold border border-transparent disabled:opacity-60',
-  'danger-ghost': 'bg-red-400 dark:bg-red-700/90 text-red-900 dark:text-white hover:bg-red-500 dark:hover:bg-red-500 hover:text-white',
+  'danger-ghost': 'bg-red-400 dark:bg-red-700/90 text-red-900 dark:text-white hover:bg-red-500 dark:hover:bg-red-500 hover:text-white disabled:opacity-50',
   blue:           'bg-blue-600 dark:bg-blue-600/90 hover:bg-blue-500 text-white disabled:opacity-60',
 }
 
