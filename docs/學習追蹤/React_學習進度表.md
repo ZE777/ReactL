@@ -522,17 +522,17 @@
 # Project C：AI Prompt Studio 實作進度
 
 > 對應規劃文件：[AIPromptStudio規劃.md](../需求規劃/AIPromptStudio規劃.md)  
-> 最後更新：2026-06-02
+> 最後更新：2026-06-05
 
 ## 實作進度統計
 
 | 指標 | 數值 |
 |------|------|
-| ✅ 已完成 | 30 |
+| ✅ 已完成 | 34 |
 | 📖 進行中 | 2 |
-| ⬜ 未開始 | 4 |
-| **總計功能項** | **36** |
-| **完成率** | **30 / 36　≈ 83.3%** |
+| ⬜ 未開始 | 2 |
+| **總計功能項** | **38** |
+| **完成率** | **34 / 38　≈ 89.5%** |
 
 > 每完成一個功能項請更新上方統計數字。
 
@@ -550,9 +550,11 @@
 | F. 多模型切換 | 2 | 2 | 第四階段 |
 | G. 前台 Next.js | 5 | 5 | 第五階段 |
 | H. 部署與 CI/CD | 1 | 0 | 第十一階段 |
-| I. 外部平台整合 | 4 | 2 | 後端外包 + 第五階段 |
+| I. 外部平台整合 | 4 | 4 | 後端外包 + 第五階段 |
 | J. Prompt Builder | 3 | 3 | 第四階段 |
-| **合計** | **36** | **30** | |
+| K. AI 金鑰管理（BYOK）| 1 | 1 | 第四階段 |
+| L. 設計系統與 UI 元件化 | 1 | 1 | 第十階段 |
+| **合計** | **38** | **34** | |
 
 ---
 
@@ -629,10 +631,10 @@
 
 | # | 功能 | 狀態 | 對應學習 | 備註 |
 |---|------|------|----------|------|
-| I1 | Line Bot Webhook 後端 | ⬜ 未開始 | 後端外包 | Claude 負責實作 |
-| I2 | Discord Bot Webhook 後端 | ⬜ 未開始 | 後端外包 | Claude 負責實作 |
-| I3 | Bot 綁定管理頁（`/bots`）| ✅ 完成 | 第四、五階段 | BotsPage React Query CRUD + toggle + inline 刪除確認 |
-| I4 | 外部對話監控頁（`/monitor`）| ✅ 完成 | 第四階段 | MonitorPage 平台篩選 + mock 對話列表 |
+| I1 | Line Bot Webhook 後端 | ✅ 完成 | 後端外包 | LineWebhookService（HMAC-SHA256 驗簽）+ 憑證驗證（GET /v2/bot/info），已部署 |
+| I2 | Discord Bot Webhook 後端 | ✅ 完成 | 後端外包 | DiscordWebhookController（Ed25519 驗簽）+ /chat Slash Command 自動註冊，已部署 |
+| I3 | Bot 綁定管理頁（`/bots`）| ✅ 完成 | 第四、五階段 | BotsPage CRUD + toggle；新增 Discord per-Bot（ApplicationId / PublicKey / Webhook URL）與憑證有效性標示 |
+| I4 | 外部對話監控頁（`/monitor`）| ✅ 完成 | 第四階段 | MonitorPage 改接真實資料（messages / conversations / stats/tokens），平台篩選 + 重設計 |
 
 ## J. Prompt Builder（V2）
 
@@ -641,6 +643,18 @@
 | J1 | 結構化表單（角色/背景/任務/格式/限制/範例 → 自動組裝）| ✅ 完成 | 第七階段 Skills | PromptBuilder 6 區塊 + assembleSystemPrompt 純函式 |
 | J2 | AI 強化按鈕（System Prompt 各區塊 Groq 改寫）| ✅ 完成 | 第四階段 | PersonaService.EnhancePromptAsync，後端呼叫 AI 回傳 JSON 分區填入 |
 | J3 | 即時完整度提示（各區塊填寫狀態 + 完整度 %）| ✅ 完成 | 第二階段 Part 5 | CompletenessPanel sticky sidebar，% bar + 逐項檢查 |
+
+## K. AI 金鑰管理（BYOK）
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| K1 | 使用者自帶 AI 金鑰（BYOK）前端 | ✅ 完成 | 第四階段 | AiKeysPage + `api/aiKeys.ts`（GET/PUT/DELETE `/users/me/ai-keys`）；自帶 Key 覆蓋系統預設，僅顯示後 4 碼，存檔前後端驗證有效性 |
+
+## L. 設計系統與 UI 元件化
+
+| # | 功能 | 狀態 | 對應學習 | 備註 |
+|---|------|------|----------|------|
+| L1 | Design Token 層 + 共用 UI 元件庫 | ✅ 完成 | 第十階段 | `tokens/colors.ts` 語意化 Color 色系（soft/badge/icon 三組 map，含 dark mode）；抽出 Card / Tag / Badge / IconButton / GhostButton / SegmentedControl / DropdownSelect / PageHeader / settingsUi 等共用元件並套用至各頁 |
 
 ---
 

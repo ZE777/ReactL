@@ -89,22 +89,31 @@ https://api.yourdomain.com
    & "C:\ngrok\ngrok.exe" config add-authtoken <你的authtoken>
    ```
 
-**啟動 tunnel：**
+**免費帳號靜態 Domain（推薦）：**
+
+登入 ngrok 帳號後，系統會配發一個**永久固定**的靜態 Domain，格式為三個英文單字。本專案目前的靜態 Domain 為：
+
+```
+https://election-hangnail-reopen.ngrok-free.dev
+```
+
+此 URL 不論重啟幾次都不會變更，不需要每次回 LINE Developer Console 更新 Webhook URL。
+
+> 未登入帳號時，每次重啟 ngrok 都會產生全新的隨機 URL（如 `a1b2c3.ngrok-free.app`），需手動重新設定所有 Webhook URL。**強烈建議登入帳號並使用靜態 Domain。**
+
+**啟動 tunnel（使用靜態 Domain）：**
 ```powershell
-& "C:\Users\ze7\Downloads\ngrok.exe" http --host-header=rewrite https://localhost:44345
+& "C:\Users\ze7\Downloads\ngrok.exe" http --domain=election-hangnail-reopen.ngrok-free.dev --host-header=rewrite https://localhost:44345
 ```
 
-> **重要：必須加上 `--host-header=rewrite`**
-> IIS Express 只接受 Host header 為 `localhost:44345` 的請求。若不加此參數，ngrok 會把外部網址（如 `xxxx.ngrok-free.dev`）直接帶入 Host header，導致 IIS Express 在 ASP.NET Core 啟動前就回傳 400 Bad Request，後端程式碼完全不會執行。
+> **`--domain` 參數**：指定使用靜態 Domain。缺少此參數時 ngrok 會另外產生一個臨時 URL，靜態 Domain 就沒有用到。
+>
+> **`--host-header=rewrite`**：IIS Express 只接受 Host header 為 `localhost:44345` 的請求。若不加此參數，ngrok 會把外部網址直接帶入 Host header，導致 IIS Express 在 ASP.NET Core 啟動前就回傳 400 Bad Request，後端程式碼完全不會執行。
 
-啟動後會顯示類似：
+啟動後會顯示：
 ```
-Forwarding  https://xxxx-xxx-xxx.ngrok-free.app -> https://localhost:44345
+Forwarding  https://election-hangnail-reopen.ngrok-free.dev -> https://localhost:44345
 ```
-
-複製 `https://xxxx-xxx-xxx.ngrok-free.app` 作為本次的 Base URL。
-
-> **注意：** 免費版 ngrok 每次重啟 URL 會變更，需重新至 LINE Developer Console 更新 Webhook URL。
 
 ---
 

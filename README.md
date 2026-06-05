@@ -40,10 +40,10 @@ ReactL/
 
 技術棧：
 - **前台**：Next.js 16 App Router + RSC + Tailwind + Framer Motion
-- **後台**：Vite + React Router + Zustand + React Query
-- **後端**：ASP.NET Core 8 + EF Core 8（Code-First Migration）+ JWT
+- **後台**：Vite + React Router + Zustand + React Query（語意化 Design Token + 自建 UI 元件庫，含 Dark Mode）
+- **後端**：ASP.NET Core 8 + EF Core 8（Code-First；schema 以 SqlScripts 版本化腳本管理）+ JWT
 - **資料庫**：MS SQL Server
-- **AI**：Gemini 2.0 Flash / Groq Llama 3.3 70B
+- **AI**：OpenAI 相容多 Provider（Groq / Mistral / Cerebras / SambaNova）+ SSE 串流；支援使用者自帶金鑰（BYOK）
 - **部署**：IIS（API + 後台靜態）+ PM2（前台 Next.js）
 
 ## 部署指南
@@ -51,24 +51,27 @@ ReactL/
 | 文件 | 說明 |
 |------|------|
 | [LINE Bot 設定步驟](docs/部署指南/LINE-Bot設定步驟.md) | LINE Messaging API Webhook 串接、ngrok 本地測試、自動回覆關閉設定 |
+| [Discord Bot 設定步驟](docs/部署指南/Discord-Bot設定步驟.md) | Discord Interactions Endpoint 串接、Slash Command 註冊、ngrok 靜態 Domain 設定 |
 
-### 本地開發 Webhook 測試（ngrok）
+### 本地開發 Webhook / Interactions 測試（ngrok）
 
-LINE Webhook 需要公開 HTTPS 網址，本地開發使用 [ngrok](https://ngrok.com/download) 建立 tunnel。
+LINE Webhook 與 Discord Interactions Endpoint 都需要公開 HTTPS 網址，本地開發使用 [ngrok](https://ngrok.com/download) 建立 tunnel。
 
 > **IIS Express 必須加 `--host-header=rewrite`**，否則 IIS Express 會因 Host header 不符直接回 400，後端程式碼不會執行。
 
+**一般啟動（每次 URL 不同）：**
 ```powershell
 & "C:\Users\ze7\Downloads\ngrok.exe" http --host-header=rewrite https://localhost:44345
 ```
 
-啟動後將顯示的 `https://xxxx.ngrok-free.app` 填入 LINE Developers Console 的 Webhook URL：
-
+**使用靜態 Domain（URL 固定不變，推薦）：**
+```powershell
+& "C:\Users\ze7\Downloads\ngrok.exe" http --domain=election-hangnail-reopen.ngrok-free.dev --host-header=rewrite https://localhost:44345
 ```
-https://xxxx.ngrok-free.app/webhooks/line/<botId>
-```
 
-詳細步驟與常見問題見 [LINE Bot 設定步驟](docs/部署指南/LINE-Bot設定步驟.md)。
+> **靜態 Domain 說明：** 登入 ngrok 帳號後系統配發一個固定 Domain（三個英文單字格式），每次重啟 ngrok 都是同一個 URL，不需要回 LINE / Discord 後台重新更新設定。必須加上 `--domain` 參數才會使用靜態 Domain，缺少此參數 ngrok 會另產生一個新的臨時 URL。
+
+詳細步驟與常見問題見各平台設定文件：[LINE Bot 設定步驟](docs/部署指南/LINE-Bot設定步驟.md) ｜ [Discord Bot 設定步驟](docs/部署指南/Discord-Bot設定步驟.md)
 
 ## 本機環境設定
 
