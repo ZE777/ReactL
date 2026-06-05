@@ -15,6 +15,7 @@ import BotsPage from './pages/BotsPage.tsx'
 import MonitorPage from './pages/MonitorPage.tsx'
 import StatsPage from './pages/StatsPage.tsx'
 import SettingsPage from './pages/SettingsPage.tsx'
+import AiKeysPage from './pages/AiKeysPage.tsx'
 import { ThemeProvider } from './context/ThemeContext.tsx'
 import { ToastProvider } from './context/ToastContext.tsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
               { path: 'monitor', element: <MonitorPage /> },
               { path: 'stats', element: <StatsPage /> },
               { path: 'settings', element: <SettingsPage /> },
+              { path: 'settings/ai-keys', element: <AiKeysPage /> },
             ],
           },
         ],
