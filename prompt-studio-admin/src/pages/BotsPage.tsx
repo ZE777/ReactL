@@ -360,7 +360,7 @@ export default function BotsPage() {
         isOpen={modalMode !== null}
         onClose={closeModal}
         title={modalMode === 'edit' ? `編輯 Bot — ${editingBot?.botName}` : '新增 Bot 綁定'}
-        size="md"
+        size="lg"
         footer={
           <div className="flex gap-2">
             <Button variant="ghost" disabled={isMutating} onClick={closeModal}>取消</Button>
@@ -950,7 +950,7 @@ function BotForm({ isEdit, personas, defaultValues, onSubmit, onDirtyChange, onV
       {(show('platform') || show('botName')) && (
         <div className="flex flex-col sm:flex-row gap-3">
           {show('platform') && (
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label className="block text-sm text-slate-400 dark:text-zinc-400 mb-1.5">平台 <span className="text-red-400">*</span></label>
               <input type="hidden" {...register('platform', { required: true })} />
               <DropdownSelect
@@ -965,7 +965,7 @@ function BotForm({ isEdit, personas, defaultValues, onSubmit, onDirtyChange, onV
             </div>
           )}
           {show('botName') && (
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label className="block text-sm text-slate-400 dark:text-zinc-400 mb-1.5">Bot 名稱 <span className="text-red-400">*</span></label>
               <Input
                 {...register('botName', { required: '請填寫 Bot 名稱', validate: v => v.trim().length > 0 || '不可全為空白' })}
@@ -1063,7 +1063,7 @@ function BotForm({ isEdit, personas, defaultValues, onSubmit, onDirtyChange, onV
       {(show('model') || show('persona')) && (
         <div className="flex flex-col sm:flex-row gap-3">
           {show('model') && (
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label className="block text-sm text-slate-400 dark:text-zinc-400 mb-1.5">AI 模型 <span className="text-red-400">*</span></label>
               <input type="hidden" {...register('modelType', { required: '請選擇 AI 模型' })} />
               <ModelSelect
@@ -1078,7 +1078,7 @@ function BotForm({ isEdit, personas, defaultValues, onSubmit, onDirtyChange, onV
             </div>
           )}
           {show('persona') && (
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label className="block text-sm text-slate-400 dark:text-zinc-400 mb-1.5">Persona</label>
               <input type="hidden" {...register('personaId')} />
               <DropdownSelect

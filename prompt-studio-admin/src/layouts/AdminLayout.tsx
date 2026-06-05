@@ -12,12 +12,18 @@ const AI_KEYS_PATH = '/settings/ai-keys'
 
 type ConversationListItem = { id: string; title: string }
 
+type UserProfile = { mustChangePassword?: boolean }
+
+/** 強制改密碼前唯一可停留的頁面 */
+const CHANGE_PASSWORD_PATH = '/change-password'
+
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/chat':          { title: '對話測試',    subtitle: '測試 Persona 與 AI 回應' },
   '/conversations': { title: '對話記錄',    subtitle: '所有測試對話' },
   '/personas':      { title: '角色',        subtitle: '管理 AI 角色設定' },
   '/prompts':       { title: 'Prompt 模板', subtitle: '管理提示詞模板庫' },
   '/bots':          { title: 'Bot 管理',    subtitle: 'Line / Discord Bot 綁定' },
+  '/access-codes':  { title: '存取碼',      subtitle: '管理邀請連結與存取權限' },
   '/monitor':       { title: '對話監控',    subtitle: '外部平台對話記錄' },
   '/stats':         { title: '統計',        subtitle: 'Token 用量與使用分析' },
   '/settings':      { title: '設定',        subtitle: '帳號與系統設定' },
@@ -61,17 +67,29 @@ export default function AdminLayout() {
     ? (conversations?.find(c => c.id === chatId)?.title ?? convDetail?.title ?? null)
     : null
 
+  // 首次登入強制改密碼：mustChangePassword 為 true 時鎖死整個後台，導向改密碼頁
+  const { data: profile } = useQuery<UserProfile>({
+    queryKey: ['profile'],
+    queryFn: () => api.get<ApiResponse<UserProfile>>('/users/me').then(unwrap),
+  })
+
   // C 方案：硬性強制——使用者尚未設定任何自帶 AI 金鑰前，鎖定在 AI 金鑰頁，
   // 不得使用後台其他功能（前台公開聊天室為獨立專案、走系統預設 key，不受影響）
   const { data: aiKeys, isLoading: keysLoading } = useQuery<AiKey[]>({
     queryKey: ['ai-keys'],
     queryFn: fetchAiKeys,
+    enabled: !profile?.mustChangePassword,
   })
   const mustSetKey = !keysLoading && !!aiKeys && aiKeys.length === 0
   // 鎖定時仍允許停留在 AI 金鑰頁與帳號設定（後者不消耗 AI，新使用者可先改名稱/密碼）
   const gated = mustSetKey
     && location.pathname !== AI_KEYS_PATH
     && location.pathname !== '/settings'
+
+  // 強制改密碼優先於任何頁面與 AI 金鑰鎖定
+  if (profile?.mustChangePassword) {
+    return <Navigate to={CHANGE_PASSWORD_PATH} replace />
+  }
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-100 page-enter">

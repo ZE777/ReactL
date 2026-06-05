@@ -11,6 +11,10 @@ const NAV = [
   { href: '/about', label: '關於' },
 ]
 
+// 後台 admin 為獨立應用（不同 origin），且以 localStorage Bearer token 驗證，
+// 無法沿用前台登入；「管理後台」直接導向 admin，由其自身登入頁處理驗證。
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'http://localhost:5173'
+
 export default function Header() {
   const pathname = usePathname()
   const [isDark, setIsDark] = useState(false)
@@ -93,13 +97,13 @@ export default function Header() {
             {isDark ? '☀️' : '🌙'}
           </button>
 
-          {/* 管理後台（桌機） */}
-          <Link
-            href="/login"
+          {/* 管理後台（桌機）— 連到獨立的 admin 應用，由其自身登入頁驗證 */}
+          <a
+            href={ADMIN_URL}
             className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium rounded-lg bg-violet-500 hover:bg-violet-600 text-white transition-colors"
           >
             管理後台
-          </Link>
+          </a>
 
           {/* 漢堡選單（手機） */}
           <button
@@ -136,12 +140,12 @@ export default function Header() {
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="/login"
+            <a
+              href={ADMIN_URL}
               className="mt-1 mb-1 flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-lg bg-violet-500 hover:bg-violet-600 text-white transition-colors"
             >
               管理後台
-            </Link>
+            </a>
           </nav>
         </div>
       )}

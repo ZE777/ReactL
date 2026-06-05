@@ -44,6 +44,8 @@ ReactL/
 - **後端**：ASP.NET Core 8 + EF Core 8（Code-First；schema 以 SqlScripts 版本化腳本管理）+ JWT
 - **資料庫**：MS SQL Server
 - **AI**：OpenAI 相容多 Provider（Groq / Mistral / Cerebras / SambaNova）+ SSE 串流；支援使用者自帶金鑰（BYOK）
+- **Discord AI 管理**：`/chat` 自然語言 → AI function calling → 後端執行 Discord 伺服器管理（23 個工具：禁言 / 踢人 / 封鎖 / 移動語音 / 身分組 / 批次刪訊息 / 查詢…）；中高風險動作有**二次確認按鈕**，並具下指令者權限檢查、Bot 階級防護、特權身分組防護與白名單制
+- **外部 Bot**：LINE Messaging API + Discord Interactions（Webhook）；Bot 憑證 AES 加密儲存、建立時自動驗證並標示有效性
 - **部署**：IIS（API + 後台靜態）+ PM2（前台 Next.js）
 
 ## 部署指南
@@ -52,6 +54,7 @@ ReactL/
 |------|------|
 | [LINE Bot 設定步驟](docs/部署指南/LINE-Bot設定步驟.md) | LINE Messaging API Webhook 串接、ngrok 本地測試、自動回覆關閉設定 |
 | [Discord Bot 設定步驟](docs/部署指南/Discord-Bot設定步驟.md) | Discord Interactions Endpoint 串接、Slash Command 註冊、ngrok 靜態 Domain 設定 |
+| [Discord Bot AI 管理功能使用說明](docs/部署指南/Discord-Bot-AI管理功能使用說明.md) | 用 `/chat` 自然語言指揮 Bot 做伺服器管理（禁言/踢人/封鎖/移動/身分組/查詢…）；含各功能所需 Bot 權限對照、二次確認流程、常見問題 |
 
 ### 本地開發 Webhook / Interactions 測試（ngrok）
 
@@ -100,7 +103,7 @@ cp prompt-studio-web/.env.example prompt-studio-web/.env.local
 
 | 變數 | 說明 | 範例 |
 |------|------|------|
-| `NEXT_PUBLIC_API_URL` | 後端 API 位址（不含版本前綴）| `http://localhost:5000` |
+| `NEXT_PUBLIC_API_URL` | 後端 API 位址（**需含 `/api/v1` 版本前綴**，與後端路由一致）| `https://localhost:44345/api/v1` |
 
 ### 後端（ASP.NET Core）
 

@@ -1,4 +1,5 @@
-export type ModelType = 'gemini-flash' | 'groq-llama'
+/** AI 模型識別碼，格式 "providerId:modelId"，例如 "groq:llama-3.3-70b-versatile"（由後端定義，故為開放字串）*/
+export type ModelType = string
 
 export type MessageRole = 'user' | 'assistant' | 'system'
 
@@ -7,6 +8,8 @@ export type Message = {
   role: MessageRole
   content: string
   createdAt?: string
+  /** 回應被後端 token 上限截斷（SSE 收到 truncated chunk） */
+  truncated?: boolean
 }
 
 export type Persona = {

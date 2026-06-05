@@ -158,7 +158,12 @@ export default function ConversationSidebar({ isOpen, onClose, locked = false }:
         aria-disabled={locked || undefined}
       >
 
-        {[...setupNavItems, ...monitorNavItems].map(item => (
+        {[
+          ...setupNavItems,
+          // 存取碼僅管理員可見（邀請連結與存取權限管理）
+          ...(profile?.role === 'Admin' ? [{ label: '存取碼', path: '/access-codes' }] : []),
+          ...monitorNavItems,
+        ].map(item => (
           <Link
             to={item.path}
             key={item.label}

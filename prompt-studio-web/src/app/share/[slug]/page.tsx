@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { fetchSharedConversation } from '@/lib/api'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import Markdown from '@/components/ui/Markdown'
 import Link from 'next/link'
 
 export async function generateMetadata(
@@ -75,12 +76,12 @@ export default async function SharePage(
                 }`}>
                   {isUser ? 'U' : (conv.personaEmoji ?? '🤖')}
                 </div>
-                <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed break-words ${
                   isUser
-                    ? 'bg-violet-500 text-white rounded-tr-sm'
+                    ? 'bg-violet-500 text-white rounded-tr-sm whitespace-pre-wrap'
                     : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 rounded-tl-sm'
                 }`}>
-                  {msg.content}
+                  {isUser ? msg.content : <Markdown>{msg.content}</Markdown>}
                 </div>
               </div>
             )

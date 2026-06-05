@@ -1,4 +1,5 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
+// fallback 對應後端 IIS Express 的 sslPort，需含 /api/v1 版本前綴（與 .env.example 一致）
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://localhost:44345/api/v1'
 
 // 一般 API 請求 10 秒逾時；SSE streaming 由呼叫端自行管理 AbortController
 const DEFAULT_TIMEOUT_MS = 10_000
@@ -50,5 +51,27 @@ export async function fetchSharedConversation(slug: string) {
 
 export async function fetchPublicPersonas() {
   const res = await api.get<{ data: import('@/types').Persona[] }>('/public/personas')
+  return res.data
+}
+
+// ── 公開存取碼 ────────────────────────────────────────────────────────────────
+export type PublicAccessStatus = {
+  /** 本站是否要求存取碼 */
+  requireAccessCode: boolean
+  /** 提供的碼是否有效 */
+  valid: boolean
+  label: string | null
+  dailyTokenLimit: number
+  usedToday: number
+  /** 今日剩餘 token；null = 不限制 */
+  remaining: number | null
+}
+
+/** 查詢存取碼狀態（剩餘額度）；code 由 X-Access-Code 標頭帶入 */
+export async function fetchAccessStatus(code: string | null) {
+  const res = await api.get<{ data: PublicAccessStatus }>('/public/access/status', {
+    cache: 'no-store',
+    headers: code ? { 'X-Access-Code': code } : undefined,
+  })
   return res.data
 }

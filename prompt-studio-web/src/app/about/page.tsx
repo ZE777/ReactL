@@ -12,7 +12,7 @@ const MODULES = [
   { name: '後台 Admin', tech: 'Vite + React + TypeScript', desc: 'Persona CRUD、Prompt Builder、對話測試、Bot 管理、Token 統計' },
   { name: '前台 Web', tech: 'Next.js 16 + App Router', desc: 'Landing Page（SSG）、外部聊天室（CSR）、對話分享頁（SSR + 動態 metadata）' },
   { name: '後端 API', tech: 'ASP.NET Core 8 + EF Core 8', desc: 'JWT 驗證、AI Streaming SSE、Line / Discord Webhook、AES Token 加密' },
-  { name: '資料庫', tech: 'MS SQL Server + EF Migrations', desc: 'Code-First，涵蓋 Users / Conversations / Personas / BotBindings 等 9 張資料表' },
+  { name: '資料庫', tech: 'MS SQL Server + SqlScripts', desc: 'EF Core Code-First 模型 + 版本化 SQL 腳本管理 schema，涵蓋 Users / Conversations / Personas / BotBindings / AiKeys 等資料表' },
 ]
 
 const HIGHLIGHTS = [
@@ -20,8 +20,8 @@ const HIGHLIGHTS = [
   'Persona 版本管理：自動快照、一鍵回滾',
   'SSE Streaming：打字機效果 + AbortController 停止生成',
   'Bot Token 安全：後端 AES 加密儲存，前端只顯示後 4 碼',
-  'Strategy Pattern：Groq / Gemini Provider 可擴充切換',
-  'Line & Discord Webhook：簽章驗證 + Adapter 封裝',
+  'OpenAI 相容多 Provider：Groq / Mistral / Cerebras / SambaNova 可擴充切換，支援 BYOK',
+  'Line & Discord Webhook：HMAC-SHA256 / Ed25519 簽章驗證',
 ]
 
 export default function AboutPage() {

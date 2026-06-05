@@ -6,7 +6,7 @@ const STACK = [
   { layer: '前台', items: ['Next.js 16', 'React 19', 'TypeScript', 'Tailwind v4', 'Framer Motion'] },
   { layer: '後台', items: ['Vite + React', 'React Router v6', 'Zustand', 'React Query', 'RHF + Zod'] },
   { layer: '後端', items: ['ASP.NET Core 8', 'EF Core 8', 'MS SQL', 'JWT Bearer', 'Serilog'] },
-  { layer: 'AI / 外部', items: ['Groq Llama 3.1', 'Gemini 2.0 Flash', 'Line Bot API', 'Discord Bot API', 'SSE Streaming'] },
+  { layer: 'AI / 外部', items: ['Groq / Mistral', 'Cerebras / SambaNova', 'Line Bot API', 'Discord Bot API', 'SSE Streaming'] },
 ]
 
 export default function TechStackSection() {

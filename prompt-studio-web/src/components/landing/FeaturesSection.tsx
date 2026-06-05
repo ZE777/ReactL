@@ -24,7 +24,7 @@ const FEATURES = [
   {
     icon: '⚡',
     title: 'SSE Streaming 回應',
-    desc: '串接 Groq Llama 3.1 70B 與 Gemini 2.0 Flash，支援打字機效果串流輸出，停止生成與重新生成。',
+    desc: '串接 Groq、Mistral、Cerebras、SambaNova 等多家 OpenAI 相容模型，支援打字機效果串流輸出與停止生成，並可自帶 API 金鑰（BYOK）。',
     color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
   },
   {

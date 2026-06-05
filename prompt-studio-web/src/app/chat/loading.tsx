@@ -1,5 +1,5 @@
-function Skeleton({ className }: { className: string }) {
-  return <div className={`bg-slate-100 dark:bg-zinc-800 rounded-xl animate-pulse ${className}`} />
+function Skeleton({ className, style }: { className: string; style?: React.CSSProperties }) {
+  return <div style={style} className={`bg-slate-100 dark:bg-zinc-800 rounded-xl animate-pulse ${className}`} />
 }
 
 // 模擬 ChatClient 版面：sidebar + 聊天主區
