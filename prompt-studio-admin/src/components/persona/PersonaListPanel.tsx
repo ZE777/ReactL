@@ -7,6 +7,8 @@ import type { ApiError } from '../../types/api'
 import api from '../../lib/api'
 import { useToast } from '../../context/ToastContext'
 import Button from '../ui/Button'
+import Tag from '../ui/Tag'
+import IconButton from '../ui/IconButton'
 
 type Props = {
   selectedId: string | null
@@ -33,9 +35,8 @@ export default function PersonaListPanel({ selectedId, onSelect, onNew, personas
     },
   })
 
-  // userId == null 才是真正的系統預設，isBuiltin 改為「公開於前台」旗標
-  const builtin = useMemo(() => personas.filter(p => p.userId == null), [personas])
-  const custom = useMemo(() => personas.filter(p => p.userId != null), [personas])
+  const builtin = useMemo(() => personas.filter(p => p.builtinGroup === 'Official'), [personas])
+  const custom = useMemo(() => personas.filter(p => p.builtinGroup === 'User'), [personas])
 
   return (
     <div className="w-full flex flex-col overflow-hidden h-full">
@@ -61,9 +62,9 @@ export default function PersonaListPanel({ selectedId, onSelect, onNew, personas
           </SectionGroup>
         )}
 
-        {custom.length > 0 && (
-          <SectionGroup label="自訂角色">
-            {custom.map(p => (
+        <SectionGroup label="自訂角色">
+          {custom.length > 0 ? (
+            custom.map(p => (
               <PersonaRow
                 key={p.id}
                 persona={p}
@@ -75,13 +76,11 @@ export default function PersonaListPanel({ selectedId, onSelect, onNew, personas
                 onDeleteCancel={() => onPendingDeleteChange(null)}
                 isDeleting={deletePersona.isPending && deletePersona.variables === p.id}
               />
-            ))}
-          </SectionGroup>
-        )}
-
-        {custom.length === 0 && (
-          <p className="px-4 py-6 text-sm text-slate-400 dark:text-zinc-400 text-center">尚無自訂 Persona，點上方「+ 新增」建立第一個</p>
-        )}
+            ))
+          ) : (
+            <p className="px-4 py-6 text-sm text-slate-400 dark:text-zinc-400 text-center">尚無自訂 Persona，點上方「+ 新增」建立第一個</p>
+          )}
+        </SectionGroup>
       </div>
     </div>
   )
@@ -129,9 +128,7 @@ function PersonaRow({ persona, isSelected, onSelect, isSystemBuiltin, isPendingD
                 {persona.name}
               </p>
               {persona.isBuiltin && !isSystemBuiltin && (
-                <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium">
-                  公開
-                </span>
+                <Tag color="green" className="flex-shrink-0">公開</Tag>
               )}
             </div>
             {persona.currentVersion && (
@@ -178,16 +175,11 @@ function PersonaRow({ persona, isSelected, onSelect, isSystemBuiltin, isPendingD
                 </Link>
               )}
               {!isSystemBuiltin && onDeleteRequest && (
-                <button
-                  onClick={onDeleteRequest}
-                  title="刪除"
-                  aria-label="刪除"
-                  className="w-7 h-7 rounded-md flex items-center justify-center text-red-600 dark:text-red-500 bg-red-300/70 dark:bg-red-600/30 hover:bg-red-400/70 dark:hover:bg-red-600/50 dark:hover:text-red-400 transition-colors cursor-pointer"
-                >
+                <IconButton color="red" onClick={onDeleteRequest} title="刪除" aria-label="刪除">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                </button>
+                </IconButton>
               )}
             </div>
           )}

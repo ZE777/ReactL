@@ -1,10 +1,13 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api, { unwrap } from '../../lib/api'
 import type { ApiResponse } from '../../types/api'
-import type { AiProvider } from '../../types/ai'
+import type { AiProvider, AiKey } from '../../types/ai'
+import { fetchAiKeys } from '../../api/aiKeys'
+import DropdownSelect from './DropdownSelect'
 import Spinner from './Spinner'
 import Button from './Button'
+import Tag from './Tag'
 
 type PersonaOption = {
   id: string
@@ -34,11 +37,11 @@ function parseProviderFromValue(value: string): { providerId: string; modelId: s
 }
 
 /**
- * 從供應商列表中找出第一個已設定且有模型的供應商的第一個模型
+ * 從供應商列表中找出第一個「使用者已設定金鑰」且有模型的供應商的第一個模型
  */
-function getFirstConfiguredModel(providers: AiProvider[]): string | null {
+function getFirstUsableModel(providers: AiProvider[], usable: Set<string>): string | null {
   for (const p of providers) {
-    if (p.isConfigured && p.models.length > 0) {
+    if (usable.has(p.id) && p.models.length > 0) {
       return `${p.id}:${p.models[0].id}`
     }
   }
@@ -46,13 +49,13 @@ function getFirstConfiguredModel(providers: AiProvider[]): string | null {
 }
 
 /**
- * 驗證 defaultValue 在供應商列表中是否存在且對應供應商已設定
+ * 驗證 defaultValue 是否存在，且使用者對該供應商已設定金鑰
  */
-function isValueValid(value: string, providers: AiProvider[]): boolean {
+function isValueValid(value: string, providers: AiProvider[], usable: Set<string>): boolean {
   const parsed = parseProviderFromValue(value)
-  if (!parsed) return false
+  if (!parsed || !usable.has(parsed.providerId)) return false
   const provider = providers.find(p => p.id === parsed.providerId)
-  if (!provider || !provider.isConfigured) return false
+  if (!provider) return false
   return provider.models.some(m => m.id === parsed.modelId)
 }
 
@@ -74,17 +77,28 @@ export default function ModelPickerModal({
     enabled: open,
   })
 
+  // 後台聊天強制使用自帶金鑰：只有使用者已設定（啟用中）金鑰的供應商才可選
+  const { data: myKeys } = useQuery<AiKey[]>({
+    queryKey: ['ai-keys'],
+    queryFn: fetchAiKeys,
+    enabled: open,
+  })
+  const usableProviders = useMemo(
+    () => new Set((myKeys ?? []).filter(k => k.isActive).map(k => k.providerId)),
+    [myKeys],
+  )
+
   // 當資料載入後，根據 defaultValue 或第一個可用模型設定初始選取值
   useEffect(() => {
     if (!providers) return
 
-    if (defaultValue && isValueValid(defaultValue, providers)) {
+    if (defaultValue && isValueValid(defaultValue, providers, usableProviders)) {
       setSelected(defaultValue)
     } else {
-      const first = getFirstConfiguredModel(providers)
-      if (first) setSelected(first)
+      const first = getFirstUsableModel(providers, usableProviders)
+      setSelected(first ?? '')
     }
-  }, [providers, defaultValue])
+  }, [providers, defaultValue, usableProviders])
 
   // 重新開啟時重設選取值與名稱
   useEffect(() => {
@@ -164,16 +178,14 @@ export default function ModelPickerModal({
               <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-200 mb-1.5">
                 Persona 角色
               </label>
-              <select
+              <DropdownSelect
                 value={selectedPersonaId}
-                onChange={e => setSelectedPersonaId(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all cursor-pointer"
-              >
-                <option value="">（不指定角色）</option>
-                {personas.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                onChange={setSelectedPersonaId}
+                options={[
+                  { value: '', label: '（不指定角色）' },
+                  ...personas.map(p => ({ value: p.id, label: p.name })),
+                ]}
+              />
             </div>
           )}
 
@@ -198,34 +210,34 @@ export default function ModelPickerModal({
 
           {!error && providers && providers.length > 0 && (
             <div className="space-y-4">
-              {providers.map((provider, providerIdx) => (
+              {providers.map((provider, providerIdx) => {
+                const usable = usableProviders.has(provider.id)
+                return (
                 <div key={provider.id}>
                   {/* 供應商標題列 */}
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm font-semibold text-slate-700 dark:text-zinc-200">
                       {provider.displayName}
                     </span>
-                    {provider.isConfigured ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-700/40">
-                        {/* 勾選圖示 */}
+                    {usable ? (
+                      <Tag color="green" className="gap-1">
                         <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
-                        已設定
-                      </span>
+                        已設定金鑰
+                      </Tag>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-400 border border-slate-200/60 dark:border-zinc-700/40">
-                        {/* 鎖頭圖示 */}
+                      <Tag color="slate" className="gap-1">
                         <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
-                        未設定
-                      </span>
+                        未設定金鑰
+                      </Tag>
                     )}
                   </div>
 
                   {/* 模型列表 */}
-                  {provider.isConfigured ? (
+                  {usable ? (
                     <div className="space-y-1">
                       {provider.models.map(model => {
                         const value = `${provider.id}:${model.id}`
@@ -261,7 +273,7 @@ export default function ModelPickerModal({
                   ) : (
                     <div className="px-3 py-2.5 rounded-lg bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-700/25">
                       <p className="text-sm text-slate-400 dark:text-zinc-400 italic">
-                        需設定 API Key 才能使用此供應商
+                        需在「AI 金鑰」頁設定此供應商的金鑰才能使用
                       </p>
                     </div>
                   )}
@@ -271,7 +283,8 @@ export default function ModelPickerModal({
                     <div className="mt-4 border-t border-slate-100 dark:border-zinc-700/25" />
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

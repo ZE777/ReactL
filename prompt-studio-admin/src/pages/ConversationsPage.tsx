@@ -6,6 +6,8 @@ import api, { unwrap } from '../lib/api'
 import type { ApiResponse, ApiError } from '../types/api'
 import { useToast } from '../context/ToastContext'
 import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
+import PageHeader from '../components/ui/PageHeader'
 import EmptyState from '../components/ui/EmptyState'
 import Spinner from '../components/ui/Spinner'
 import PageLoading from '../components/ui/PageLoading'
@@ -298,10 +300,7 @@ export default function ConversationsPage() {
     <div className="h-full overflow-y-auto">
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-zinc-100">對話記錄</h2>
-            <p className="text-sm text-slate-400 dark:text-zinc-400 mt-0.5">共 {convList.length} 筆對話</p>
-          </div>
+          <PageHeader title="對話記錄" subtitle={`共 ${convList.length} 筆對話`} />
           <div className="flex items-center gap-2">
             {isManaging ? (
               <>
@@ -432,55 +431,50 @@ export default function ConversationsPage() {
                     {!isManaging && (
                       <div className="flex items-center gap-1 pl-2 pr-2" onClick={e => e.stopPropagation()}>
                         {/* CV-05：改名按鈕 */}
-                        <button
-                          onClick={e => startRename(conv, e)}
-                          title="改名"
-                          className="w-7 h-7 rounded-md flex items-center justify-center text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors cursor-pointer"
-                        >
+                        <IconButton color="blue" onClick={e => startRename(conv, e)} title="改名">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
-                        </button>
+                        </IconButton>
 
                         {/* 釘選按鈕（既有） */}
-                        <button
+                        <IconButton
                           onClick={() => pinMutation.mutate({ id: conv.id, isPinned: !conv.isPinned })}
                           disabled={pinMutation.isPending && pinMutation.variables?.id === conv.id}
                           title={conv.isPinned ? '取消釘選' : '釘選'}
-                          className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 ${
-                            conv.isPinned
-                              ? 'text-amber-500 dark:text-amber-500 bg-amber-300/70 dark:bg-amber-600/30 hover:bg-amber-400/70 dark:hover:bg-amber-600/50 dark:hover:text-amber-400'
-                              : 'text-slate-400 dark:text-zinc-400 bg-slate-200/70 dark:bg-zinc-600/30 hover:text-amber-500 hover:bg-amber-300/70 dark:hover:bg-amber-600/30'
-                          }`}
+                          className={conv.isPinned
+                            ? 'text-amber-500 dark:text-amber-500 bg-amber-300/70 dark:bg-amber-600/30 hover:bg-amber-400/70 dark:hover:bg-amber-600/50 dark:hover:text-amber-400'
+                            : 'text-slate-400 dark:text-zinc-400 bg-slate-200/70 dark:bg-zinc-600/30 hover:text-amber-500 hover:bg-amber-300/70 dark:hover:bg-amber-600/30'
+                          }
                         >
                           <svg className="w-3.5 h-3.5" fill={conv.isPinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                           </svg>
-                        </button>
+                        </IconButton>
 
                         {/* CV-08：公開分享按鈕（綠色代表已分享） */}
-                        <button
+                        <IconButton
+                          color="emerald"
                           onClick={e => handleShareClick(conv, e)}
                           disabled={shareMutation.isPending && shareMutation.variables?.id === conv.id}
                           title={conv.isPublic ? '已公開分享（點擊查看連結）' : '公開分享'}
-                          className="w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 text-emerald-600 dark:text-emerald-500 bg-emerald-300/70 dark:bg-emerald-600/30 hover:bg-emerald-400/70 dark:hover:bg-emerald-600/50 dark:hover:text-emerald-400"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                           </svg>
-                        </button>
+                        </IconButton>
 
                         {/* 刪除按鈕（既有） */}
-                        <button
+                        <IconButton
+                          color="red"
                           onClick={() => handleDelete(conv.id)}
                           disabled={deleteMutation.isPending}
                           title="刪除"
-                          className="w-7 h-7 rounded-md flex items-center justify-center text-red-600 dark:text-red-500 bg-red-300/70 dark:bg-red-600/30 hover:bg-red-400/70 dark:hover:bg-red-600/50 dark:hover:text-red-400 transition-colors cursor-pointer disabled:opacity-40"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
-                        </button>
+                        </IconButton>
                       </div>
                     )}
 

@@ -66,6 +66,25 @@ function EmojiPicker({ value, onChange }: { value: string; onChange: (v: string)
               </button>
             ))}
           </div>
+
+          {/* 自由輸入區：支援 Win+. 貼入任意 Emoji */}
+          <div className="mt-2 border-t border-slate-100 dark:border-zinc-800 pt-2">
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mb-1">或直接輸入（Win + .）</p>
+            <input
+              type="text"
+              autoComplete="off"
+              placeholder="貼上任意 Emoji…"
+              value={value}
+              onChange={e => {
+                // 取第一個 grapheme cluster，避免混入多餘字元
+                const seg = new Intl.Segmenter()
+                const first = [...seg.segment(e.target.value)][0]?.segment ?? ''
+                onChange(first)
+              }}
+              className="w-full text-center text-base rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 py-1 px-2 focus:outline-none focus:border-violet-400 dark:focus:border-violet-600 placeholder:text-slate-300 dark:placeholder:text-zinc-600"
+            />
+          </div>
+
           {value && (
             <button
               type="button"
@@ -296,11 +315,15 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
         <div className="w-24 flex-shrink-0 pt-1">
           <p className="text-sm text-slate-600 dark:text-zinc-400">基本資料</p>
         </div>
-        <div className="flex items-end gap-3 flex-1">
-          <EmojiPicker
-            value={watch('emoji') ?? ''}
-            onChange={v => setValue('emoji', v)}
-          />
+        <div className="flex items-start gap-3 flex-1">
+          <div className="flex flex-col">
+            {/* 與名稱欄位 label 等高的佔位元素，確保 emoji button 對齊 input 上緣（不受 error message 影響） */}
+            <label className="block text-sm mb-1.5 invisible pointer-events-none select-none" aria-hidden="true">_</label>
+            <EmojiPicker
+              value={watch('emoji') ?? ''}
+              onChange={v => setValue('emoji', v)}
+            />
+          </div>
           <div className="flex-1">
             <label className="block text-sm text-slate-400 dark:text-zinc-400 mb-1.5">
               Persona 名稱 <span className="text-red-400">*</span>
@@ -365,7 +388,7 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
           type="button"
           variant={isEdit && !hasChanges ? 'ghost' : 'danger-ghost'}
           size="sm"
-          disabled={isEnhancing}
+          disabled={isEnhancing || mutation.isPending}
           onClick={() => {
             if (hasChanges) {
               setShowDiscardModal(true)

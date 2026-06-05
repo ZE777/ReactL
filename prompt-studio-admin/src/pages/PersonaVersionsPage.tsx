@@ -7,6 +7,7 @@ import type { ApiError, ApiResponse } from '../types/api'
 import api, { unwrap } from '../lib/api'
 import { useToast } from '../context/ToastContext'
 import Button from '../components/ui/Button'
+import Tag from '../components/ui/Tag'
 import PageLoading from '../components/ui/PageLoading'
 import PageError from '../components/ui/PageError'
 import EmptyState from '../components/ui/EmptyState'
@@ -153,9 +154,7 @@ function VersionCard({ version, isCurrent, isRestoring, onRestore }: CardProps) 
             v{version.version}
           </span>
           {isCurrent && (
-            <span className="px-2 py-0.5 rounded-full text-sm font-medium bg-violet-300/70 dark:bg-violet-600 text-violet-800 dark:text-white">
-              目前版本
-            </span>
+            <Tag color="violet">目前版本</Tag>
           )}
           {version.changeNote && (
             <span className="text-sm text-slate-400 dark:text-zinc-400">{version.changeNote}</span>

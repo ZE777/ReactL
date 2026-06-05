@@ -3,6 +3,7 @@ import type { PromptSections } from '../../types/persona'
 import { useToast } from '../../context/ToastContext'
 import Textarea from '../ui/Textarea'
 import Button from '../ui/Button'
+import GhostButton from '../ui/GhostButton'
 
 type SectionDef = {
   key: keyof PromptSections
@@ -130,12 +131,7 @@ export default function PromptBuilder({ value, onChange, onEnhance, isEnhancing,
           </Button>
           <div className="flex gap-2">
             {assembled && (
-              <button
-                type="button"
-                onClick={handleCopy}
-                disabled={isEnhancing}
-                className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded bg-slate-300/80 dark:bg-zinc-400/30 text-slate-800 dark:text-white hover:bg-slate-400 dark:hover:bg-zinc-500 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
+              <GhostButton onClick={handleCopy} disabled={isEnhancing}>
                 {copied ? (
                   <>
                     <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,7 +147,7 @@ export default function PromptBuilder({ value, onChange, onEnhance, isEnhancing,
                     <span>複製 Prompt</span>
                   </>
                 )}
-              </button>
+              </GhostButton>
             )}
             <button
               type="button"

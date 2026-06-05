@@ -1,9 +1,14 @@
 ﻿import { useState, useEffect } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, Navigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api, { unwrap } from '../lib/api'
 import type { ApiResponse } from '../types/api'
+import type { AiKey } from '../types/ai'
+import { fetchAiKeys } from '../api/aiKeys'
 import ConversationSidebar from '../components/ConversationSidebar'
+
+/** 強制設定金鑰前唯一可停留的頁面 */
+const AI_KEYS_PATH = '/settings/ai-keys'
 
 type ConversationListItem = { id: string; title: string }
 
@@ -16,6 +21,7 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/monitor':       { title: '對話監控',    subtitle: '外部平台對話記錄' },
   '/stats':         { title: '統計',        subtitle: 'Token 用量與使用分析' },
   '/settings':      { title: '設定',        subtitle: '帳號與系統設定' },
+  '/settings/ai-keys': { title: 'AI 金鑰',   subtitle: '管理各供應商 API Key' },
 }
 
 // Dynamic routes that can't be matched by static prefix
@@ -55,9 +61,21 @@ export default function AdminLayout() {
     ? (conversations?.find(c => c.id === chatId)?.title ?? convDetail?.title ?? null)
     : null
 
+  // C 方案：硬性強制——使用者尚未設定任何自帶 AI 金鑰前，鎖定在 AI 金鑰頁，
+  // 不得使用後台其他功能（前台公開聊天室為獨立專案、走系統預設 key，不受影響）
+  const { data: aiKeys, isLoading: keysLoading } = useQuery<AiKey[]>({
+    queryKey: ['ai-keys'],
+    queryFn: fetchAiKeys,
+  })
+  const mustSetKey = !keysLoading && !!aiKeys && aiKeys.length === 0
+  // 鎖定時仍允許停留在 AI 金鑰頁與帳號設定（後者不消耗 AI，新使用者可先改名稱/密碼）
+  const gated = mustSetKey
+    && location.pathname !== AI_KEYS_PATH
+    && location.pathname !== '/settings'
+
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-100 page-enter">
-      <ConversationSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <ConversationSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} locked={mustSetKey} />
 
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Header */}
@@ -86,7 +104,7 @@ export default function AdminLayout() {
             - 這些頁面自己負責 overflow-y-auto；
               一般頁面（PromptsPage 等）需自帶 overflow-y-auto wrapper */}
         <div className="flex-1 min-h-0 overflow-hidden relative">
-          <Outlet />
+          {gated ? <Navigate to={AI_KEYS_PATH} replace /> : <Outlet />}
         </div>
       </main>
     </div>

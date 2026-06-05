@@ -5,6 +5,10 @@ import type { ApiResponse } from '../types/api'
 import PageLoading from '../components/ui/PageLoading'
 import PageError from '../components/ui/PageError'
 import EmptyState from '../components/ui/EmptyState'
+import Tag from '../components/ui/Tag'
+import SegmentedControl from '../components/ui/SegmentedControl'
+import Card from '../components/ui/Card'
+import PageHeader from '../components/ui/PageHeader'
 
 type TokenStatsByDate = {
   date: string
@@ -60,14 +64,14 @@ type StatCardProps = { label: string; value: string; sub?: string; color?: 'viol
 function StatCard({ label, value, sub, color = 'violet' }: StatCardProps) {
   const dotColor = { violet: 'bg-violet-500', green: 'bg-emerald-500', blue: 'bg-blue-500', amber: 'bg-amber-500' }
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5">
+    <Card className="p-5">
       <div className="flex items-center gap-2 mb-3">
         <div className={`w-2 h-2 rounded-full ${dotColor[color]}`} />
         <p className="text-sm text-slate-400 dark:text-zinc-400">{label}</p>
       </div>
       <p className="text-2xl font-semibold text-slate-800 dark:text-zinc-100">{value}</p>
       {sub && <p className="text-sm text-slate-400 dark:text-zinc-400 mt-1">{sub}</p>}
-    </div>
+    </Card>
   )
 }
 
@@ -83,6 +87,13 @@ const SOURCE_OPTIONS = [
   { value: 'web', label: 'Web' },
   { value: 'line', label: 'Line' },
   { value: 'discord', label: 'Discord' },
+]
+
+const RANGE_OPTIONS = [
+  { value: '7d', label: '近 7 天' },
+  { value: '30d', label: '近 30 天' },
+  { value: 'month', label: '本月' },
+  { value: 'all', label: '全部' },
 ]
 
 const MODEL_COLORS = [
@@ -203,49 +214,16 @@ export default function StatsPage() {
 
         {/* 頁首 */}
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-zinc-100">Token 統計</h2>
-            <p className="text-sm text-slate-400 dark:text-zinc-400 mt-0.5">{rangeLabel}{sourceLabel} 用量概覽</p>
-          </div>
+          <PageHeader title="Token 統計" subtitle={`${rangeLabel}${sourceLabel} 用量概覽`} />
           <div className="flex flex-wrap gap-3 items-end">
-            {/* 來源篩選 */}
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-slate-400 dark:text-zinc-500">來源</span>
-              <div className="flex gap-0.5 bg-slate-100 dark:bg-zinc-800 rounded-lg p-0.5">
-                {SOURCE_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSource(opt.value)}
-                    className={`px-3 py-1 text-sm rounded-md transition-colors cursor-pointer ${
-                      source === opt.value
-                        ? 'bg-white dark:bg-zinc-700 text-slate-800 dark:text-zinc-100 shadow-sm'
-                        : 'text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* 時間範圍 */}
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-slate-400 dark:text-zinc-500">時間</span>
-              <div className="flex gap-0.5 bg-slate-100 dark:bg-zinc-800 rounded-lg p-0.5">
-                {(['7d', '30d', 'month', 'all'] as const).map(r => (
-                  <button
-                    key={r}
-                    onClick={() => setRange(r)}
-                    className={`px-3 py-1 text-sm rounded-md transition-colors cursor-pointer ${
-                      range === r
-                        ? 'bg-violet-600 text-white shadow-sm'
-                        : 'text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-200'
-                    }`}
-                  >
-                    {r === '7d' ? '近 7 天' : r === '30d' ? '近 30 天' : r === 'month' ? '本月' : '全部'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <SegmentedControl label="來源" options={SOURCE_OPTIONS} value={source} onChange={setSource} />
+            <SegmentedControl
+              label="時間"
+              options={RANGE_OPTIONS}
+              value={range}
+              onChange={v => setRange(v as typeof range)}
+              variant="accent"
+            />
             {/* 刷新按鈕 */}
             <button
               onClick={() => refetch()}
@@ -327,7 +305,7 @@ export default function StatsPage() {
           )}
 
           {/* 每日趨勢圖 */}
-          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 mb-6">
+          <Card className="p-5 mb-6">
             <div className="flex items-center justify-between mb-4">
               <p className="text-base font-medium text-slate-700 dark:text-zinc-200">每日用量趨勢</p>
               <div className="flex items-center gap-3 text-sm text-slate-400">
@@ -370,11 +348,11 @@ export default function StatsPage() {
                 })}
               </div>
             )}
-          </div>
+          </Card>
 
           {/* 來源分布 */}
           {(stats?.bySource ?? []).length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 mb-6">
+            <Card className="p-5 mb-6">
               <p className="text-base font-medium text-slate-700 dark:text-zinc-200 mb-4">來源分布</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {(['admin', 'web', 'line', 'discord'] as const).map(src => {
@@ -388,7 +366,7 @@ export default function StatsPage() {
                         <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
                           {s.label}
                           {s.isExternal && (
-                            <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500">外部</span>
+                            <Tag className="ml-1">外部</Tag>
                           )}
                         </span>
                       </div>
@@ -398,16 +376,16 @@ export default function StatsPage() {
                   )
                 })}
               </div>
-            </div>
+            </Card>
           )}
 
           {/* 模型用量明細 */}
           {filteredModelStats.length === 0 && allModels.length > 0 ? (
-            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl">
+            <Card>
               <EmptyState title="所有模型已隱藏" description="點選上方模型名稱以顯示用量明細" />
-            </div>
+            </Card>
           ) : displayModelStats.length > 0 ? (
-            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5">
+            <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-base font-medium text-slate-700 dark:text-zinc-200">模型用量明細</p>
                 {hasZeroUsageModels && (
@@ -475,7 +453,7 @@ export default function StatsPage() {
                   )
                 })}
               </div>
-            </div>
+            </Card>
           ) : null}
 
         </div>

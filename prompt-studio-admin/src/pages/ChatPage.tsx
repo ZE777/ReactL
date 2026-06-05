@@ -14,6 +14,10 @@ import { useToast } from '../context/ToastContext'
 import EmptyState from '../components/ui/EmptyState'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
+import Tag from '../components/ui/Tag'
+import FilterPill from '../components/ui/FilterPill'
+import IconButton from '../components/ui/IconButton'
+import GhostButton from '../components/ui/GhostButton'
 import Spinner from '../components/ui/Spinner'
 import PageLoading from '../components/ui/PageLoading'
 import ModelPickerModal from '../components/ui/ModelPickerModal'
@@ -469,16 +473,17 @@ export default function ChatPage() {
         </button>
 
         {/* 刪除對話 */}
-        <button
+        <IconButton
+          color="red"
           onClick={() => setShowDeleteModal(true)}
           disabled={deleteMutation.isPending}
           title="刪除此對話"
-          className="w-7 h-7 rounded-md flex items-center justify-center text-red-600 dark:text-red-500 bg-red-300/70 dark:bg-red-600/30 hover:bg-red-400/70 dark:hover:bg-red-600/50 dark:hover:text-red-400 transition-colors disabled:opacity-40 ml-1"
+          className="ml-1"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
-        </button>
+        </IconButton>
       </div>
 
       {/* 訊息區 */}
@@ -741,11 +746,7 @@ function MessageBubble({ role, content, createdAt, isStreaming, isLastAssistant,
               </span>
             )}
             {/* 複製按鈕 */}
-            <button
-              onClick={handleCopy}
-              title="複製訊息"
-              className="ml-auto flex items-center gap-1.5 text-sm px-2.5 py-1 rounded text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
-            >
+            <GhostButton onClick={handleCopy} title="複製訊息" className="ml-auto">
               {copied ? (
                 <>
                   <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -761,20 +762,16 @@ function MessageBubble({ role, content, createdAt, isStreaming, isLastAssistant,
                   <span>複製</span>
                 </>
               )}
-            </button>
+            </GhostButton>
 
             {/* C-08：Regenerate 按鈕，只出現在最後一筆 assistant 訊息 hover 時 */}
             {isLastAssistant && onRegenerate && (
-              <button
-                onClick={() => void onRegenerate()}
-                title="重新生成回應"
-                className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
-              >
+              <GhostButton onClick={() => void onRegenerate()} title="重新生成回應">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <span>重新生成</span>
-              </button>
+              </GhostButton>
             )}
           </div>
         )}
@@ -828,17 +825,9 @@ function PromptPickerOverlay({ templates, onSelect, onClose }: PromptPickerOverl
         {/* 分類篩選 */}
         <div className="flex gap-2 px-6 py-3 border-b border-slate-100 dark:border-zinc-700/25 flex-shrink-0 flex-wrap">
           {(['all', ...PROMPT_CATEGORIES] as const).map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1 text-sm rounded-full transition-colors cursor-pointer ${
-                activeCategory === cat
-                  ? 'bg-violet-500 text-white'
-                  : 'bg-slate-200/80 dark:bg-zinc-700/50 text-slate-600 dark:text-zinc-400 hover:bg-slate-300 dark:hover:bg-zinc-600'
-              }`}
-            >
+            <FilterPill key={cat} active={activeCategory === cat} onClick={() => setActiveCategory(cat)}>
               {cat === 'all' ? '全部' : cat}
-            </button>
+            </FilterPill>
           ))}
         </div>
 
@@ -863,9 +852,7 @@ function PromptPickerOverlay({ templates, onSelect, onClose }: PromptPickerOverl
                 {t.tags.length > 0 && (
                   <div className="flex gap-1 mt-2 flex-wrap">
                     {t.tags.map(tag => (
-                      <span key={tag} className="text-xs text-slate-400 dark:text-zinc-500 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
-                        #{tag}
-                      </span>
+                      <Tag key={tag} color="amber">#{tag}</Tag>
                     ))}
                   </div>
                 )}

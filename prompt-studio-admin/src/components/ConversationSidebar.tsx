@@ -45,9 +45,11 @@ const MAX_VISIBLE_CONVERSATIONS = 5
 type Props = {
   isOpen: boolean
   onClose: () => void
+  /** 尚未設定 AI 金鑰時鎖定：導覽與對話列表變灰、不可點，只留 AI 金鑰與登出 */
+  locked?: boolean
 }
 
-export default function ConversationSidebar({ isOpen, onClose }: Props) {
+export default function ConversationSidebar({ isOpen, onClose, locked = false }: Props) {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -150,8 +152,11 @@ export default function ConversationSidebar({ isOpen, onClose }: Props) {
         </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3">
+      {/* Nav（未設定金鑰時整區鎖定：變灰、不可點、不可展開） */}
+      <nav
+        className={`flex-1 overflow-y-auto py-3 ${locked ? 'opacity-50 pointer-events-none select-none' : ''}`}
+        aria-disabled={locked || undefined}
+      >
 
         {[...setupNavItems, ...monitorNavItems].map(item => (
           <Link
@@ -192,7 +197,7 @@ export default function ConversationSidebar({ isOpen, onClose }: Props) {
           </span>
         </button>
 
-        {isConvOpen && (
+        {isConvOpen && !locked && (
           <div className="ml-4 mb-1 border-l border-slate-100 dark:border-zinc-700/25">
             {convList.slice(0, MAX_VISIBLE_CONVERSATIONS).map(conv => (
               <div
@@ -211,14 +216,15 @@ export default function ConversationSidebar({ isOpen, onClose }: Props) {
               </div>
             ))}
 
-            {convList.length > MAX_VISIBLE_CONVERSATIONS && (
-              <Link
-                to="/conversations"
-                className="block pl-3 pr-3 py-1 text-sm text-slate-400 dark:text-zinc-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors"
-              >
-                還有 {convList.length - MAX_VISIBLE_CONVERSATIONS} 筆，查看全部 →
-              </Link>
-            )}
+            {/* 永遠提供進入對話記錄頁的入口（即使少於上限），方便批量管理/刪除 */}
+            <Link
+              to="/conversations"
+              className="block pl-3 pr-3 py-1 text-sm text-slate-400 dark:text-zinc-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors"
+            >
+              {convList.length > MAX_VISIBLE_CONVERSATIONS
+                ? `還有 ${convList.length - MAX_VISIBLE_CONVERSATIONS} 筆，查看全部 →`
+                : '查看全部對話 →'}
+            </Link>
 
             <button
               onClick={() => setShowModelPicker(true)}
@@ -232,17 +238,6 @@ export default function ConversationSidebar({ isOpen, onClose }: Props) {
         )}
 
       </nav>
-
-      {/* 模型選擇 Modal — 確認後以選取的 model 建立新對話 */}
-      <ModelPickerModal
-        open={showModelPicker}
-        onClose={() => setShowModelPicker(false)}
-        personas={personas ?? []}
-        onConfirm={(model, title, personaId) => {
-          setShowModelPicker(false)
-          createMutation.mutate({ model, title: title || '新對話', personaId })
-        }}
-      />
 
       {/* User section */}
       <div ref={menuRef} className="relative p-3 border-t border-slate-200 dark:border-zinc-800">
@@ -267,6 +262,10 @@ export default function ConversationSidebar({ isOpen, onClose }: Props) {
           <Link to="/settings" onClick={() => setIsMenuOpen(false)} className="w-full px-3 py-2.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer text-left">
             <span className="text-sm">⚙️</span>
             <span className="text-sm text-slate-600 dark:text-zinc-400">帳號設定</span>
+          </Link>
+          <Link to="/settings/ai-keys" onClick={() => setIsMenuOpen(false)} className="w-full px-3 py-2.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer text-left">
+            <span className="text-sm">🔑</span>
+            <span className="text-sm text-slate-600 dark:text-zinc-400">AI 金鑰</span>
           </Link>
           <div className="border-t border-slate-100 dark:border-zinc-700" />
           <button
@@ -296,6 +295,17 @@ export default function ConversationSidebar({ isOpen, onClose }: Props) {
         </div>
       </div>
     </aside>
+
+    {/* 模型選擇 Modal 放在 aside 外，避免 aside 的 transform 讓 fixed 定位失效 */}
+    <ModelPickerModal
+      open={showModelPicker}
+      onClose={() => setShowModelPicker(false)}
+      personas={personas ?? []}
+      onConfirm={(model, title, personaId) => {
+        setShowModelPicker(false)
+        createMutation.mutate({ model, title: title || '新對話', personaId })
+      }}
+    />
     </>
   )
 }

@@ -5,8 +5,14 @@ import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
 import { markdownComponents } from '../components/ui/MarkdownComponents'
 import api, { unwrap } from '../lib/api'
+import { fetchBots } from '../api/bots'
 import type { ApiResponse } from '../types/api'
+import type { BotBinding } from '../types/bot'
 import Badge from '../components/ui/Badge'
+import FilterPill from '../components/ui/FilterPill'
+import GhostButton from '../components/ui/GhostButton'
+import PageHeader from '../components/ui/PageHeader'
+import DropdownSelect from '../components/ui/DropdownSelect'
 import EmptyState from '../components/ui/EmptyState'
 import PageLoading from '../components/ui/PageLoading'
 import PageError from '../components/ui/PageError'
@@ -53,6 +59,7 @@ const platformColor: Record<string, 'green' | 'blue' | 'violet'> = {
 
 export default function MonitorPage() {
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all')
+  const [botBindingId, setBotBindingId] = useState<string | null>(null)
   const [convPage, setConvPage] = useState(1)
   const [search, setSearch] = useState('')
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -61,13 +68,25 @@ export default function MonitorPage() {
   const [msgPage, setMsgPage] = useState(1)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Bot 清單（與 BotsPage 共用 ['bots'] 快取，增刪改後自動更新）
+  const { data: botList } = useQuery<BotBinding[]>({
+    queryKey: ['bots'],
+    queryFn: fetchBots,
+  })
+
+  // 依目前平台篩選可選的 Bot 選項
+  const filteredBots = (botList ?? []).filter(b =>
+    platformFilter === 'all' || b.platform === platformFilter
+  )
+
   // 左側：對話列表（以使用者 ID 為單位分組）
   const { data: convData, isLoading: convLoading, error: convError, refetch: convRefetch, isFetching: convFetching } =
     useQuery<PagedResponse<ConversationSummary>>({
-      queryKey: ['monitor-conversations', platformFilter, convPage],
-      queryFn: () => {
+      queryKey: ['monitor-conversations', platformFilter, botBindingId, convPage],
+      queryFn: async () => {
         const params = new URLSearchParams({ page: String(convPage), pageSize: '30' })
         if (platformFilter !== 'all') params.set('platform', platformFilter)
+        if (botBindingId) params.set('botBindingId', botBindingId)
         return api.get<ApiResponse<PagedResponse<ConversationSummary>>>(`/monitor/conversations?${params}`).then(unwrap)
       },
       refetchInterval: 30_000,
@@ -76,11 +95,12 @@ export default function MonitorPage() {
   // 右側：選定對話的訊息記錄（有 externalUserId 時後端回傳完整內容，不截斷）
   const { data: msgData, isLoading: msgLoading, refetch: msgRefetch, isFetching: msgFetching } =
     useQuery<PagedResponse<ExternalMessageItem>>({
-      queryKey: ['monitor-messages', selectedUserId, selectedPlatform, msgPage],
-      queryFn: () => {
+      queryKey: ['monitor-messages', selectedUserId, selectedPlatform, botBindingId, msgPage],
+      queryFn: async () => {
         const params = new URLSearchParams({ page: String(msgPage), pageSize: '50' })
         if (selectedUserId) params.set('externalUserId', selectedUserId)
         if (selectedPlatform) params.set('platform', selectedPlatform)
+        if (botBindingId) params.set('botBindingId', botBindingId)
         return api.get<ApiResponse<PagedResponse<ExternalMessageItem>>>(`/monitor/messages?${params}`).then(unwrap)
       },
       enabled: selectedUserId != null,
@@ -117,6 +137,16 @@ export default function MonitorPage() {
 
   function handlePlatformChange(p: PlatformFilter) {
     setPlatformFilter(p)
+    setBotBindingId(null)
+    setConvPage(1)
+    setSearch('')
+    setSelectedUserId(null)
+    setSelectedPlatform(null)
+    setSelectedConv(null)
+  }
+
+  function handleBotChange(id: string | null) {
+    setBotBindingId(id)
     setConvPage(1)
     setSearch('')
     setSelectedUserId(null)
@@ -132,10 +162,7 @@ export default function MonitorPage() {
       {/* 頂部：標題 + 平台分類 Tab */}
       <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 border-b border-slate-200 dark:border-zinc-800">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-zinc-100">對話監控</h2>
-            <p className="text-sm text-slate-400 dark:text-zinc-400 mt-0.5">外部平台的使用者對話記錄</p>
-          </div>
+          <PageHeader title="對話監控" subtitle="外部平台的使用者對話記錄" />
           <button
             onClick={() => convRefetch()}
             disabled={convFetching}
@@ -147,20 +174,31 @@ export default function MonitorPage() {
             {convFetching ? '更新中' : '全表刷新'}
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {(['all', 'line', 'discord'] as PlatformFilter[]).map(p => (
-            <button
-              key={p}
-              onClick={() => handlePlatformChange(p)}
-              className={`px-3 py-1.5 text-sm rounded-full transition-colors cursor-pointer ${
-                platformFilter === p
-                  ? 'bg-violet-500 text-white'
-                  : 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
-              }`}
-            >
+            <FilterPill key={p} active={platformFilter === p} onClick={() => handlePlatformChange(p)}>
               {p === 'all' ? '全部' : p === 'line' ? 'LINE' : 'Discord'}
-            </button>
+            </FilterPill>
           ))}
+
+          {/* Bot 下拉選單：該平台下有 Bot 時顯示 */}
+          {filteredBots.length > 0 && (
+            <DropdownSelect
+              value={botBindingId ?? ''}
+              onChange={v => handleBotChange(v || null)}
+              options={[
+                { value: '', label: '全部 Bot' },
+                ...filteredBots.map(b => ({
+                  value: b.id,
+                  label: b.botName,
+                  badge: platformFilter === 'all'
+                    ? { label: b.platform === 'line' ? 'LINE' : 'DC', color: platformColor[b.platform] }
+                    : undefined,
+                })),
+              ]}
+              className="w-48"
+            />
+          )}
         </div>
       </div>
 
@@ -466,11 +504,7 @@ function MonitorMessageBubble({ role, content, createdAt, tokensIn, tokensOut }:
               ↑{tokensIn} ↓{tokensOut}
             </span>
           )}
-          <button
-            onClick={handleCopy}
-            title="複製訊息"
-            className="ml-auto flex items-center gap-1.5 text-sm px-2.5 py-1 rounded text-slate-400 dark:text-zinc-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-          >
+          <GhostButton onClick={handleCopy} title="複製訊息" className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
             {copied ? (
               <>
                 <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -486,7 +520,7 @@ function MonitorMessageBubble({ role, content, createdAt, tokensIn, tokensOut }:
                 <span>複製</span>
               </>
             )}
-          </button>
+          </GhostButton>
         </div>
       </div>
     </div>

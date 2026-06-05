@@ -7,6 +7,8 @@ export type PromptSections = {
   examples?: string
 }
 
+export type PersonaBuiltinGroup = 'Official' | 'User'
+
 export type Persona = {
   id: string
   name: string
@@ -15,8 +17,9 @@ export type Persona = {
   promptSections?: PromptSections
   currentVersion?: number
   isBuiltin?: boolean
-  /** null 表示系統預設 Persona，有值表示使用者自訂 */
-  userId?: string | null
+  /** 'Official' = 系統內建 | 'User' = 使用者自訂 */
+  builtinGroup: PersonaBuiltinGroup
+  userId: string
   createdAt?: string
   updatedAt?: string
 }
