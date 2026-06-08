@@ -19,6 +19,8 @@ export type Persona = {
   isBuiltin?: boolean
   /** 'Official' = 系統內建 | 'User' = 使用者自訂 */
   builtinGroup: PersonaBuiltinGroup
+  /** 前台公開聊天使用此角色時的 AI 模型（格式 providerId:modelId） */
+  modelType?: string
   userId: string
   createdAt?: string
   updatedAt?: string
@@ -28,6 +30,8 @@ export type PersonaFormData = {
   name: string
   emoji?: string
   isBuiltin: boolean
+  /** 前台公開聊天使用的 AI 模型（providerId:modelId） */
+  modelType: string
   promptSections: PromptSections
 }
 

@@ -5,12 +5,27 @@ import { useSearchParams } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Markdown from '@/components/ui/Markdown'
 import type { Message, Persona } from '@/types'
-import { fetchPublicPersonas, fetchAccessStatus, type PublicAccessStatus } from '@/lib/api'
+import { fetchPublicPersonas, fetchAccessStatus, fetchPublicChatHistory, type PublicAccessStatus } from '@/lib/api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://localhost:44345/api/v1'
 
 // 存取碼存於 localStorage，邀請連結帶 ?code= 時自動寫入
 const ACCESS_CODE_KEY = 'ps_access_code'
+
+// 對話工作階段 Id（首次使用時產生並存於 localStorage），供後台監控分組同一訪客的連續對話
+const CHAT_SESSION_KEY = 'ps_chat_session'
+
+/** 取得（必要時產生）瀏覽器端的對話工作階段 Id */
+function getChatSessionId(): string {
+  if (typeof window === 'undefined') return ''
+  let id = localStorage.getItem(CHAT_SESSION_KEY)
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem(CHAT_SESSION_KEY, id)
+  }
+  return id
+}
+
 
 // 與後端 MaxLength 對齊
 const MAX_INPUT_LENGTH = 4000
@@ -33,7 +48,7 @@ function TypingDots() {
 }
 
 // ── 訊息複製按鈕（hover 顯示） ────────────────────────────────────────────────
-function CopyMessageButton({ content }: { content: string }) {
+function CopyMessageButton({ content, className = '' }: { content: string; className?: string }) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
@@ -50,7 +65,7 @@ function CopyMessageButton({ content }: { content: string }) {
     <button
       onClick={handleCopy}
       title="複製訊息"
-      className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+      className={`flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 ${className}`}
     >
       {copied ? (
         <>
@@ -141,6 +156,7 @@ export default function ChatClient() {
         const personaId = searchParams.get('personaId')
         const initial = personaId ? (list.find(p => p.id === personaId) ?? list[0]) : list[0]
         setSelectedPersona(initial ?? null)
+        // 歷史對話改由「角色 + 存取碼」effect 從後端撈回（見下方 loadServerHistory）
       })
       .catch(() => {
         setPersonasLoading(false)
@@ -199,10 +215,33 @@ export default function ChatClient() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isStreaming])
 
+  // ── 從後端撈回歷史對話 ──────────────────────────────────────────────────────
+  // 一人一碼：以存取碼識別（跨裝置可見），無碼則退回 sessionId（同瀏覽器）。
+  // 角色或存取碼變動時重新載入（例如剛輸入存取碼通過閘門）；
+  // ignore 旗標確保存取碼快速變動時，較舊的回應不會覆蓋較新的結果。
+  const selectedPersonaId = selectedPersona?.id
+  useEffect(() => {
+    if (!selectedPersonaId) return
+    let ignore = false
+    fetchPublicChatHistory(selectedPersonaId, accessCode, getChatSessionId())
+      .then(items => {
+        if (ignore) return
+        setMessages(items.map(m => ({
+          id: crypto.randomUUID(),
+          role: m.role as Message['role'],
+          content: m.content,
+          createdAt: m.createdAt,
+        })))
+      })
+      .catch(() => { /* 撈不到（網路或尚無記錄）就維持目前狀態 */ })
+    return () => { ignore = true }
+  }, [selectedPersonaId, accessCode])
+
   // ── 切換角色 ────────────────────────────────────────────────────────────────
   function handlePersonaChange(persona: Persona) {
     abortRef.current?.abort()
     setSelectedPersona(persona)
+    // 先清空，改由上方 effect 從後端撈該角色的歷史回填
     setMessages([])
     setIsStreaming(false)
     setStreamingId(null)
@@ -230,13 +269,14 @@ export default function ChatClient() {
       .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content.trim())
       .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
-    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: text }
+    const now = new Date().toISOString()
+    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: text, createdAt: now }
     const assistantId = crypto.randomUUID()
 
     setMessages(prev => [
       ...prev,
       userMsg,
-      { id: assistantId, role: 'assistant', content: '' },
+      { id: assistantId, role: 'assistant', content: '', createdAt: now },
     ])
     setInput('')
     setIsStreaming(true)
@@ -251,11 +291,15 @@ export default function ChatClient() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // ngrok 免費版：跳過瀏覽器警告攔截頁，確保串流端點回傳的是 SSE 而非 HTML
+          'ngrok-skip-browser-warning': 'true',
           ...(accessCode ? { 'X-Access-Code': accessCode } : {}),
+          'X-Chat-Session': getChatSessionId(),
         },
         body: JSON.stringify({
           personaId: selectedPersona.id,
-          modelType: 'groq:llama-3.3-70b-versatile',
+          // 模型以角色設定為準（後端會再次以角色的 ModelType 覆寫，此處帶上保持一致）
+          modelType: selectedPersona.modelType ?? 'groq:llama-3.3-70b-versatile',
           messages: history,
           userMessage: text,
         }),
@@ -418,6 +462,12 @@ export default function ChatClient() {
                 今日剩餘 {accessStatus.remaining.toLocaleString()} tokens
               </span>
             )}
+            {/* 對話記錄保留天數提示 */}
+            {accessStatus != null && accessStatus.logRetentionDays > 0 && (
+              <span className="hidden md:inline text-xs text-slate-400 dark:text-zinc-500 shrink-0" title={`對話記錄保留 ${accessStatus.logRetentionDays} 天後自動清除`}>
+                · 記錄保留 {accessStatus.logRetentionDays} 天
+              </span>
+            )}
             {/* 手機：換角色按鈕 */}
             <button
               onClick={() => setShowPersonaPicker(true)}
@@ -487,10 +537,17 @@ export default function ChatClient() {
                       </div>
                     )}
 
-                    {/* assistant 訊息：hover 顯示複製按鈕 */}
-                    {!isUser && !isThisStreaming && msg.content && (
-                      <CopyMessageButton content={msg.content} />
-                    )}
+                    {/* 傳送時間 + 複製按鈕（位置比照後台：同一排、複製靠末端、hover 浮現） */}
+                    <div className={`flex items-center gap-2 px-1 w-full ${isUser ? 'flex-row-reverse' : ''}`}>
+                      {msg.createdAt && !(isThisStreaming && !msg.content) && (
+                        <span className="text-xs text-slate-400 dark:text-zinc-500 select-none">
+                          {new Date(msg.createdAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                      {msg.content && !isThisStreaming && (
+                        <CopyMessageButton content={msg.content} className="ml-auto" />
+                      )}
+                    </div>
                   </div>
                 </div>
               )

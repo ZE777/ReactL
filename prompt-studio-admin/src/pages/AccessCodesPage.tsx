@@ -32,7 +32,7 @@ type FormData = {
   expiresAt: string
 }
 
-/** ISO UTC 字串 → datetime-local input 需要的本地時間字串（YYYY-MM-DDTHH:mm） */
+/** 後端時間字串（台灣本地時間，無時區標記）→ datetime-local input 字串（YYYY-MM-DDTHH:mm） */
 function isoToLocalInput(iso: string | null): string {
   if (!iso) return ''
   const d = new Date(iso)
@@ -41,12 +41,17 @@ function isoToLocalInput(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-/** datetime-local 字串（本地時間）→ ISO 字串或 null */
+/**
+ * datetime-local 字串（本地時間）→ 送給後端的本地時間字串或 null。
+ * 後端整套以台灣本地時間儲存與比對過期（DateTime.Now），
+ * 故「不可」用 toISOString() 轉成 UTC，否則會整整偏移 8 小時；
+ * 直接補上秒數送出使用者輸入的牆上時間（無時區標記）。
+ */
 function localInputToIso(value: string): string | null {
-  if (!value.trim()) return null
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toISOString()
+  const v = value.trim()
+  if (!v) return null
+  // datetime-local 為 "YYYY-MM-DDTHH:mm"，補滿秒數後原樣送出，不做時區換算
+  return v.length === 16 ? `${v}:00` : v
 }
 
 /** 過期時間是否已過 */

@@ -1,6 +1,7 @@
 ﻿import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import 'katex/dist/katex.min.css'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import App from './App.tsx'
 import AdminLayout from './layouts/AdminLayout.tsx'
@@ -13,6 +14,7 @@ import PersonaVersionsPage from './pages/PersonaVersionsPage.tsx'
 import PromptsPage from './pages/PromptsPage.tsx'
 import BotsPage from './pages/BotsPage.tsx'
 import MonitorPage from './pages/MonitorPage.tsx'
+import PublicChatMonitorPage from './pages/PublicChatMonitorPage.tsx'
 import StatsPage from './pages/StatsPage.tsx'
 import SettingsPage from './pages/SettingsPage.tsx'
 import AiKeysPage from './pages/AiKeysPage.tsx'
@@ -63,7 +65,7 @@ function GlobalFallback({ error, resetErrorBoundary }: FallbackProps) {
             重新整理頁面
           </button>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.location.href = import.meta.env.BASE_URL}
             className="w-full py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 text-sm rounded-lg transition-colors cursor-pointer"
           >
             回到首頁
@@ -98,6 +100,7 @@ const router = createBrowserRouter([
               { path: 'bots', element: <BotsPage /> },
               { path: 'access-codes', element: <AccessCodesPage /> },
               { path: 'monitor', element: <MonitorPage /> },
+              { path: 'public-chat-monitor', element: <PublicChatMonitorPage /> },
               { path: 'stats', element: <StatsPage /> },
               { path: 'settings', element: <SettingsPage /> },
               { path: 'settings/ai-keys', element: <AiKeysPage /> },
@@ -107,7 +110,11 @@ const router = createBrowserRouter([
       },
     ],
   },
-])
+], {
+  // 與 Vite base 一致：透過 ngrok 子路徑 /admin 發布時，路由基底設為 /admin
+  // BASE_URL 為 '/admin/'，去掉結尾斜線避免 react-router basename 警告
+  basename: import.meta.env.BASE_URL.replace(/\/$/, '') || '/',
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
-import rehypeHighlight from 'rehype-highlight'
-import { markdownComponents } from '../components/ui/MarkdownComponents'
+import { markdownComponents, remarkPlugins, rehypePlugins } from '../components/ui/MarkdownComponents'
 import 'highlight.js/styles/github-dark.css'
 import type { AxiosError } from 'axios'
 import api, { unwrap } from '../lib/api'
@@ -723,7 +722,7 @@ function MessageBubble({ role, content, createdAt, isStreaming, isLastAssistant,
               prose-pre:bg-slate-100 dark:prose-pre:bg-zinc-800 prose-pre:rounded-lg
               prose-code:text-violet-600 dark:prose-code:text-violet-400
               prose-code:before:content-none prose-code:after:content-none">
-              <ReactMarkdown rehypePlugins={[rehypeHighlight]} components={markdownComponents}>{content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={markdownComponents}>{content}</ReactMarkdown>
             </div>
           )}
         </div>

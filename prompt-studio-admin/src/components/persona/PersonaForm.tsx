@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
 import type { Persona, PersonaFormData, PromptSections } from '../../types/persona'
 import type { ApiError, ApiResponse } from '../../types/api'
+import type { AiProvider } from '../../types/ai'
 import api, { unwrap } from '../../lib/api'
 import { useToast } from '../../context/ToastContext'
 import Input from '../ui/Input'
 import Button from '../ui/Button'
 import Modal from '../ui/Modal'
+import DropdownSelect, { type SelectOptionGroup } from '../ui/DropdownSelect'
 import PromptBuilder, { assembleSystemPrompt } from './PromptBuilder'
+
+/** 前台角色預設模型（與後端 Persona.ModelType 預設一致） */
+const DEFAULT_MODEL = 'groq:llama-3.3-70b-versatile'
 
 const EMOJI_OPTIONS = [
   '🤖','🧠','🎯','💡','📝','🔬','🎨','👨‍💻','👩‍💻','📊',
@@ -157,6 +162,7 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
 
   const [sections, setSections] = useState<PromptSections>(persona?.promptSections ?? EMPTY_SECTIONS)
   const [isBuiltin, setIsBuiltin] = useState(persona?.isBuiltin ?? false)
+  const [modelType, setModelType] = useState(persona?.modelType ?? DEFAULT_MODEL)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [enhancedKeys, setEnhancedKeys] = useState<Set<keyof PromptSections>>(new Set())
   /** 新增模式初始為 true（開啟即提示必填）；編輯模式初始為 false（touched-aware） */
@@ -164,6 +170,32 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
   /** 已被 blur 過的 section 欄位（用於 touched 驗證） */
   const [touchedSections, setTouchedSections] = useState<Set<keyof PromptSections>>(new Set())
   const enhanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 前台模型僅 Admin 可設定：取當前使用者角色（與側欄共用 ['profile'] 快取）
+  const { data: profile } = useQuery<{ role: string }>({
+    queryKey: ['profile'],
+    queryFn: () => api.get<ApiResponse<{ role: string }>>('/users/me').then(unwrap),
+    staleTime: 5 * 60 * 1000,
+  })
+  const isAdmin = profile?.role === 'Admin'
+
+  // 前台角色可選的模型清單（依供應商分組）；公開端點，免登入即可取得
+  const { data: providers } = useQuery<AiProvider[]>({
+    queryKey: ['ai-providers'],
+    queryFn: () => api.get<ApiResponse<AiProvider[]>>('/ai/providers').then(unwrap),
+    enabled: isAdmin,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const modelGroups = useMemo<SelectOptionGroup[]>(
+    () => (providers ?? [])
+      .filter(p => p.models.length > 0)
+      .map(p => ({
+        label: p.displayName,
+        options: p.models.map(m => ({ value: `${p.id}:${m.id}`, label: m.displayName })),
+      })),
+    [providers],
+  )
 
   // 錯誤只在送出過或 blur 過的欄位顯示，避免初次開啟即全紅
   const sectionErrors = useMemo((): Partial<Record<keyof PromptSections, string>> => {
@@ -187,6 +219,7 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
     reset({ name: persona?.name ?? '', emoji: persona?.emoji ?? '' })
     setSections(persona?.promptSections ?? EMPTY_SECTIONS)
     setIsBuiltin(persona?.isBuiltin ?? false)
+    setModelType(persona?.modelType ?? DEFAULT_MODEL)
     // 新增模式保持 true（開啟即顯示必填紅框）；編輯模式重置為 false
     setSubmittedOnce(persona == null)
     setTouchedSections(new Set())
@@ -205,6 +238,7 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
         systemPrompt: data.systemPrompt,
         promptSections: JSON.stringify(data.promptSections),
         isBuiltin: data.isBuiltin,
+        modelType: data.modelType,
       }
       return isEdit
         ? api.put<ApiResponse<Persona>>(`/personas/${persona!.id}`, body).then(unwrap)
@@ -277,7 +311,7 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
     // 用即時計算避免 stale closure 的 sectionErrors
     const hasErrors = REQUIRED_SECTIONS.some(k => !sections[k]?.trim())
     if (hasErrors) return
-    mutation.mutate({ ...base, isBuiltin, promptSections: sections, systemPrompt: assembleSystemPrompt(sections) })
+    mutation.mutate({ ...base, isBuiltin, modelType, promptSections: sections, systemPrompt: assembleSystemPrompt(sections) })
   }
 
   const isEnhancing = enhanceMutation.isPending
@@ -293,8 +327,9 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
     if (!isEdit) return true
     const sectionsChanged = JSON.stringify(sections) !== JSON.stringify(persona!.promptSections ?? EMPTY_SECTIONS)
     const builtinChanged = isBuiltin !== (persona!.isBuiltin ?? false)
-    return isDirty || sectionsChanged || builtinChanged
-  }, [isEdit, isDirty, sections, isBuiltin, persona])
+    const modelChanged = modelType !== (persona!.modelType ?? DEFAULT_MODEL)
+    return isDirty || sectionsChanged || builtinChanged || modelChanged
+  }, [isEdit, isDirty, sections, isBuiltin, modelType, persona])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-0">
@@ -368,6 +403,27 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
           </button>
         </div>
       </div>
+
+      {/* 前台模型：僅 Admin 可設定。此角色在前台公開聊天室使用的 AI 模型（後台聊天的模型由對話本身決定，不受此設定影響） */}
+      {isAdmin && (
+        <div className="flex items-start gap-4 py-4 border-b border-dashed border-slate-200/70 dark:border-zinc-700/25">
+          <div className="w-24 flex-shrink-0 pt-1">
+            <p className="text-sm text-slate-600 dark:text-zinc-400">前台模型</p>
+          </div>
+          <div className="flex-1">
+            <DropdownSelect
+              value={modelType}
+              onChange={setModelType}
+              groups={modelGroups}
+              placeholder="選擇前台聊天使用的模型"
+              className="w-full sm:w-72"
+            />
+            <p className="text-xs text-slate-400 dark:text-zinc-400 mt-1.5">
+              前台訪客選用此角色時會使用這個模型；若某供應商額度用完，可改選其他供應商的模型。
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Prompt Builder */}
       <div className="py-4">

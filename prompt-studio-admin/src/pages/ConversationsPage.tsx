@@ -153,8 +153,9 @@ function ConversationPreview({ id, createdAt }: { id: string; createdAt: string 
   )
 }
 
-// 前台 Web App 的 Base URL，用於組裝公開分享連結
-const WEB_BASE_URL = (import.meta as { env: Record<string, string> }).env.VITE_WEB_BASE_URL ?? 'http://localhost:3000'
+// 前台 Web App 對外網址，用於組裝公開分享連結 /share/<slug>
+// 與 AccessCodesPage 的邀請連結共用同一設定（VITE_PUBLIC_WEB_URL）
+const WEB_BASE_URL = (import.meta as { env: Record<string, string> }).env.VITE_PUBLIC_WEB_URL ?? 'http://localhost:3000'
 
 export default function ConversationsPage() {
   const navigate = useNavigate()
@@ -454,7 +455,7 @@ export default function ConversationsPage() {
 
                         {/* CV-08：公開分享按鈕（綠色代表已分享） */}
                         <IconButton
-                          color="emerald"
+                          color="green"
                           onClick={e => handleShareClick(conv, e)}
                           disabled={shareMutation.isPending && shareMutation.variables?.id === conv.id}
                           title={conv.isPublic ? '已公開分享（點擊查看連結）' : '公開分享'}

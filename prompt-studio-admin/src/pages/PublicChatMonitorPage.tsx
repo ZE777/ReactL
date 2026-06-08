@@ -3,165 +3,91 @@ import { useQuery } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import 'highlight.js/styles/github-dark.css'
 import { markdownComponents, remarkPlugins, rehypePlugins } from '../components/ui/MarkdownComponents'
-import api, { unwrap } from '../lib/api'
-import { fetchBots } from '../api/bots'
-import type { ApiResponse } from '../types/api'
-import type { BotBinding } from '../types/bot'
+import { fetchPublicChatConversations, fetchPublicChatMessages, fetchPublicChatRetentionDays } from '../api/publicChatMonitor'
+import type { PublicChatConversation } from '../types/publicChatMonitor'
 import Badge from '../components/ui/Badge'
-import FilterPill from '../components/ui/FilterPill'
 import GhostButton from '../components/ui/GhostButton'
 import PageHeader from '../components/ui/PageHeader'
-import DropdownSelect from '../components/ui/DropdownSelect'
 import EmptyState from '../components/ui/EmptyState'
 import PageLoading from '../components/ui/PageLoading'
 import PageError from '../components/ui/PageError'
 import { useToast } from '../context/ToastContext'
 
-type PlatformFilter = 'all' | 'line' | 'discord'
-
-type ConversationSummary = {
-  platform: string
-  botName: string
-  externalUserId: string
-  externalChannelId?: string
-  messageCount: number
-  lastMessageAt: string
-  senderName?: string
-  senderAvatarUrl?: string
+/** 對話顯示名稱：優先標籤，其次存取碼，最後標示匿名 */
+function convTitle(conv: PublicChatConversation): string {
+  return conv.accessCodeLabel ?? conv.accessCodeText ?? '匿名訪客'
 }
 
-type ExternalMessageItem = {
-  id: string
-  platform: string
-  botName: string
-  externalUserId: string
-  role: string
-  contentPreview: string
-  tokensIn: number
-  tokensOut: number
-  createdAt: string
+/** 模型字串 providerId:modelId → 顯示用短名（取 modelId 部分） */
+function shortModel(modelType: string | null | undefined): string | null {
+  if (!modelType) return null
+  const idx = modelType.indexOf(':')
+  return idx >= 0 ? modelType.slice(idx + 1) : modelType
 }
 
-type PagedResponse<T> = {
-  items: T[]
-  totalCount: number
-  page: number
-  pageSize: number
-  totalPages: number
-  hasNextPage: boolean
-  hasPreviousPage: boolean
-}
-
-const platformColor: Record<string, 'green' | 'blue' | 'violet'> = {
-  line: 'green', discord: 'blue', web: 'violet',
-}
-
-export default function MonitorPage() {
-  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all')
-  const [botBindingId, setBotBindingId] = useState<string | null>(null)
+export default function PublicChatMonitorPage() {
   const [convPage, setConvPage] = useState(1)
   const [search, setSearch] = useState('')
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
-  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
-  const [selectedConv, setSelectedConv] = useState<ConversationSummary | null>(null)
+  const [selectedSession, setSelectedSession] = useState<string | null>(null)
+  const [selectedConv, setSelectedConv] = useState<PublicChatConversation | null>(null)
   const [msgPage, setMsgPage] = useState(1)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Bot 清單（與 BotsPage 共用 ['bots'] 快取，增刪改後自動更新）
-  const { data: botList } = useQuery<BotBinding[]>({
-    queryKey: ['bots'],
-    queryFn: fetchBots,
+  // 左側：對話列表（以工作階段分組）。search 走後端比對存取碼/session
+  const { data: convData, isLoading: convLoading, error: convError, refetch: convRefetch, isFetching: convFetching } =
+    useQuery({
+      queryKey: ['public-chat-conversations', convPage, search],
+      queryFn: () => fetchPublicChatConversations({ page: convPage, search }),
+      refetchInterval: 30_000,
+    })
+
+  // 聊天記錄保留天數（顯示於副標，提醒逾期自動清除）
+  const { data: retentionDays } = useQuery({
+    queryKey: ['public-chat-retention-days'],
+    queryFn: fetchPublicChatRetentionDays,
+    staleTime: 60 * 60 * 1000,
   })
 
-  // 依目前平台篩選可選的 Bot 選項
-  const filteredBots = (botList ?? []).filter(b =>
-    platformFilter === 'all' || b.platform === platformFilter
-  )
-
-  // 左側：對話列表（以使用者 ID 為單位分組）
-  const { data: convData, isLoading: convLoading, error: convError, refetch: convRefetch, isFetching: convFetching } =
-    useQuery<PagedResponse<ConversationSummary>>({
-      queryKey: ['monitor-conversations', platformFilter, botBindingId, convPage],
-      queryFn: async () => {
-        const params = new URLSearchParams({ page: String(convPage), pageSize: '30' })
-        if (platformFilter !== 'all') params.set('platform', platformFilter)
-        if (botBindingId) params.set('botBindingId', botBindingId)
-        return api.get<ApiResponse<PagedResponse<ConversationSummary>>>(`/monitor/conversations?${params}`).then(unwrap)
-      },
-      refetchInterval: 30_000,
-    })
-
-  // 右側：選定對話的訊息記錄（有 externalUserId 時後端回傳完整內容，不截斷）
+  // 右側：選定對話的完整訊息記錄
   const { data: msgData, isLoading: msgLoading, refetch: msgRefetch, isFetching: msgFetching } =
-    useQuery<PagedResponse<ExternalMessageItem>>({
-      queryKey: ['monitor-messages', selectedUserId, selectedPlatform, botBindingId, msgPage],
-      queryFn: async () => {
-        const params = new URLSearchParams({ page: String(msgPage), pageSize: '50' })
-        if (selectedUserId) params.set('externalUserId', selectedUserId)
-        if (selectedPlatform) params.set('platform', selectedPlatform)
-        if (botBindingId) params.set('botBindingId', botBindingId)
-        return api.get<ApiResponse<PagedResponse<ExternalMessageItem>>>(`/monitor/messages?${params}`).then(unwrap)
-      },
-      enabled: selectedUserId != null,
+    useQuery({
+      queryKey: ['public-chat-messages', selectedSession, msgPage],
+      queryFn: () => fetchPublicChatMessages({ sessionId: selectedSession!, page: msgPage }),
+      enabled: selectedSession != null,
       refetchInterval: 30_000,
     })
 
-  const allConversations = convData?.items ?? []
-  const conversations = search.trim()
-    ? allConversations.filter(c =>
-        c.externalUserId.toLowerCase().includes(search.toLowerCase()) ||
-        (c.senderName ?? '').toLowerCase().includes(search.toLowerCase())
-      )
-    : allConversations
-  // 訊息列表從後端回傳的降序轉為升序（時間由舊到新）
+  const conversations = convData?.items ?? []
+  // 後端降序回傳，轉為升序（時間由舊到新）顯示
   const sortedMessages = [...(msgData?.items ?? [])].reverse()
 
-  // 訊息載入完成或切換對話時，自動捲到最新訊息（底部）
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
   }, [sortedMessages])
 
-  function handleSelectConversation(conv: ConversationSummary) {
-    setSelectedUserId(conv.externalUserId)
-    setSelectedPlatform(conv.platform)
+  function handleSelectConversation(conv: PublicChatConversation) {
+    setSelectedSession(conv.sessionId)
     setSelectedConv(conv)
     setMsgPage(1)
   }
 
   function handleBack() {
-    setSelectedUserId(null)
-    setSelectedPlatform(null)
+    setSelectedSession(null)
     setSelectedConv(null)
   }
 
-  function handlePlatformChange(p: PlatformFilter) {
-    setPlatformFilter(p)
-    setBotBindingId(null)
-    setConvPage(1)
-    setSearch('')
-    setSelectedUserId(null)
-    setSelectedPlatform(null)
-    setSelectedConv(null)
-  }
-
-  function handleBotChange(id: string | null) {
-    setBotBindingId(id)
-    setConvPage(1)
-    setSearch('')
-    setSelectedUserId(null)
-    setSelectedPlatform(null)
-    setSelectedConv(null)
-  }
-
-  if (convLoading) return <PageLoading text="載入對話列表" />
-  if (convError) return <PageError title="載入對話列表失敗" onRetry={convRefetch} />
+  if (convLoading) return <PageLoading text="載入前台對話列表" />
+  if (convError) return <PageError title="載入前台對話列表失敗" onRetry={convRefetch} />
 
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden">
-      {/* 頂部：標題 + 平台分類 Tab */}
+      {/* 頂部：標題 + 刷新 */}
       <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 border-b border-slate-200 dark:border-zinc-800">
-        <div className="flex items-center justify-between mb-4">
-          <PageHeader title="對話監控" subtitle="外部平台的使用者對話記錄" />
+        <div className="flex items-center justify-between">
+          <PageHeader
+            title="前台聊天監控"
+            subtitle={`公開聊天室（存取碼）訪客的對話記錄${retentionDays && retentionDays > 0 ? `，記錄保留 ${retentionDays} 天後自動清除` : ''}`}
+          />
           <button
             onClick={() => convRefetch()}
             disabled={convFetching}
@@ -173,38 +99,12 @@ export default function MonitorPage() {
             {convFetching ? '更新中' : '全表刷新'}
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {(['all', 'line', 'discord'] as PlatformFilter[]).map(p => (
-            <FilterPill key={p} active={platformFilter === p} onClick={() => handlePlatformChange(p)}>
-              {p === 'all' ? '全部' : p === 'line' ? 'LINE' : 'Discord'}
-            </FilterPill>
-          ))}
-
-          {/* Bot 下拉選單：該平台下有 Bot 時顯示 */}
-          {filteredBots.length > 0 && (
-            <DropdownSelect
-              value={botBindingId ?? ''}
-              onChange={v => handleBotChange(v || null)}
-              options={[
-                { value: '', label: '全部 Bot' },
-                ...filteredBots.map(b => ({
-                  value: b.id,
-                  label: b.botName,
-                  badge: platformFilter === 'all'
-                    ? { label: b.platform === 'line' ? 'LINE' : 'DC', color: platformColor[b.platform] }
-                    : undefined,
-                })),
-              ]}
-              className="w-48"
-            />
-          )}
-        </div>
       </div>
 
       {/* 分割面板 */}
       <div className="flex-1 flex overflow-hidden">
         {/* 左側：對話列表 */}
-        <div className={`${selectedUserId ? 'hidden lg:flex' : 'flex'} w-full lg:w-80 lg:flex-shrink-0 flex-col border-r border-slate-200 dark:border-zinc-800 overflow-hidden`}>
+        <div className={`${selectedSession ? 'hidden lg:flex' : 'flex'} w-full lg:w-80 lg:flex-shrink-0 flex-col border-r border-slate-200 dark:border-zinc-800 overflow-hidden`}>
           {/* 搜尋框 */}
           <div className="flex-shrink-0 px-3 py-2.5 border-b border-slate-100 dark:border-zinc-800">
             <div className="relative">
@@ -214,13 +114,13 @@ export default function MonitorPage() {
               <input
                 type="text"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="搜尋暱稱或 UID…"
+                onChange={e => { setSearch(e.target.value); setConvPage(1) }}
+                placeholder="搜尋存取碼或工作階段…"
                 className="w-full pl-8 pr-7 py-1.5 text-sm bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-500 rounded-lg border-0 outline-none focus:ring-1 focus:ring-violet-400 dark:focus:ring-violet-500 transition-shadow"
               />
               {search && (
                 <button
-                  onClick={() => setSearch('')}
+                  onClick={() => { setSearch(''); setConvPage(1) }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 cursor-pointer"
                   aria-label="清除搜尋"
                 >
@@ -233,18 +133,18 @@ export default function MonitorPage() {
           {conversations.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
               <EmptyState
-                title={search ? '找不到符合的對話' : '此平台尚無對話記錄'}
-                description={search ? '請嘗試其他關鍵字' : '外部 Bot 收到訊息後會顯示在此'}
+                title={search ? '找不到符合的對話' : '尚無前台聊天記錄'}
+                description={search ? '請嘗試其他關鍵字' : '訪客在公開聊天室發訊息後會顯示在此'}
               />
             </div>
           ) : (
             <>
               <div className="flex-1 overflow-y-auto">
                 {conversations.map((conv, i) => {
-                  const isSelected = selectedUserId === conv.externalUserId && selectedPlatform === conv.platform
+                  const isSelected = selectedSession === conv.sessionId
                   return (
                     <button
-                      key={`${conv.platform}-${conv.externalUserId}`}
+                      key={conv.sessionId}
                       onClick={() => handleSelectConversation(conv)}
                       className={`w-full text-left px-4 py-3 transition-colors cursor-pointer ${
                         isSelected
@@ -253,39 +153,36 @@ export default function MonitorPage() {
                       } ${i < conversations.length - 1 ? 'border-b border-slate-100 dark:border-zinc-800' : ''}`}
                     >
                       <div className="flex items-start gap-3">
-                        {/* 頭像 */}
-                        {conv.senderAvatarUrl ? (
-                          <img
-                            src={conv.senderAvatarUrl}
-                            alt={conv.senderName ?? conv.externalUserId}
-                            className="w-9 h-9 rounded-full object-cover flex-shrink-0 mt-0.5"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
-                              {(conv.senderName ?? conv.externalUserId).charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                        {/* 文字資訊 */}
+                        <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
+                            {convTitle(conv).charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-0.5">
-                            {/* 暱稱：有資料顯示真實名稱，否則依平台顯示預設文字 */}
-                            <span className={`text-base font-semibold truncate ${conv.senderName ? 'text-slate-800 dark:text-zinc-100' : 'text-slate-400 dark:text-zinc-500 italic'}`}>
-                              {conv.senderName ?? (conv.platform === 'line' ? 'LINE 使用者' : 'Discord 使用者')}
+                            <span className="text-base font-semibold truncate text-slate-800 dark:text-zinc-100">
+                              {convTitle(conv)}
                             </span>
-                            <Badge color={platformColor[conv.platform] ?? 'violet'} className="ml-auto flex-shrink-0">
-                              {conv.platform.toUpperCase()}
-                            </Badge>
+                            <Badge color="violet" className="ml-auto flex-shrink-0">前台</Badge>
                           </div>
-                          {/* UID 固定顯示在第二行 */}
-                          <p className="text-xs font-mono text-slate-500 dark:text-zinc-400 truncate mb-0.5">
-                            {conv.externalUserId}
-                          </p>
+                          {conv.accessCodeText && (
+                            <p className="text-xs font-mono text-slate-500 dark:text-zinc-400 truncate mb-0.5">
+                              {conv.accessCodeText}
+                            </p>
+                          )}
+                          {/* 角色 · 模型（最近一次使用） */}
+                          {(conv.personaName || conv.modelType) && (
+                            <p className="text-xs text-slate-500 dark:text-zinc-400 truncate mb-0.5">
+                              <span className="text-slate-600 dark:text-zinc-300">{conv.personaName ?? '無角色'}</span>
+                              {shortModel(conv.modelType) && (
+                                <span className="text-slate-400 dark:text-zinc-500 font-mono"> · {shortModel(conv.modelType)}</span>
+                              )}
+                            </p>
+                          )}
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-slate-400 dark:text-zinc-500 truncate">{conv.botName}</span>
-                            <span className="text-xs text-slate-300 dark:text-zinc-600">·</span>
                             <span className="text-xs text-slate-400 dark:text-zinc-500 flex-shrink-0">{conv.messageCount} 則</span>
+                            <span className="text-xs text-slate-300 dark:text-zinc-600">·</span>
+                            <span className="text-xs text-slate-400 dark:text-zinc-500 font-mono flex-shrink-0">↕{conv.totalTokens}</span>
                             <span className="text-xs text-slate-300 dark:text-zinc-500 ml-auto flex-shrink-0">
                               {new Date(conv.lastMessageAt).toLocaleDateString('zh-TW')}
                             </span>
@@ -326,10 +223,10 @@ export default function MonitorPage() {
         </div>
 
         {/* 右側：聊天室 */}
-        <div className={`${selectedUserId ? 'flex' : 'hidden lg:flex'} flex-1 flex-col overflow-hidden`}>
-          {!selectedUserId ? (
+        <div className={`${selectedSession ? 'flex' : 'hidden lg:flex'} flex-1 flex-col overflow-hidden`}>
+          {!selectedSession ? (
             <div className="flex-1 flex items-center justify-center">
-              <EmptyState title="選擇一個對話" description="從左側選取使用者來查看完整對話記錄" />
+              <EmptyState title="選擇一個對話" description="從左側選取訪客來查看完整對話記錄" />
             </div>
           ) : (
             <>
@@ -342,32 +239,28 @@ export default function MonitorPage() {
                 >
                   ←
                 </button>
-                {/* 頭像 */}
-                {selectedConv?.senderAvatarUrl ? (
-                  <img
-                    src={selectedConv.senderAvatarUrl}
-                    alt={selectedConv.senderName ?? selectedUserId ?? ''}
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
-                      {((selectedConv?.senderName ?? selectedUserId) ?? '?').charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                {/* 名稱與 ID */}
+                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
+                    {selectedConv ? convTitle(selectedConv).charAt(0).toUpperCase() : '?'}
+                  </span>
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-slate-700 dark:text-zinc-200 truncate">
-                      {selectedConv?.senderName ?? selectedUserId}
+                      {selectedConv ? convTitle(selectedConv) : ''}
                     </p>
-                    <Badge color={platformColor[selectedPlatform ?? ''] ?? 'violet'}>
-                      {selectedPlatform?.toUpperCase()}
-                    </Badge>
+                    <Badge color="violet">前台</Badge>
                   </div>
-                  {selectedConv?.senderName && (
-                    <p className="text-xs font-mono text-slate-500 dark:text-zinc-400 truncate">{selectedUserId}</p>
+                  {selectedConv?.accessCodeText && (
+                    <p className="text-xs font-mono text-slate-500 dark:text-zinc-400 truncate">{selectedConv.accessCodeText}</p>
+                  )}
+                  {(selectedConv?.personaName || selectedConv?.modelType) && (
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">
+                      {selectedConv?.personaName ?? '無角色'}
+                      {shortModel(selectedConv?.modelType) && (
+                        <span className="font-mono text-slate-400 dark:text-zinc-500"> · {shortModel(selectedConv?.modelType)}</span>
+                      )}
+                    </p>
                   )}
                 </div>
                 <span className="text-xs text-slate-400 dark:text-zinc-500 flex-shrink-0">
@@ -401,10 +294,12 @@ export default function MonitorPage() {
                       <MonitorMessageBubble
                         key={msg.id}
                         role={msg.role as 'user' | 'assistant'}
-                        content={msg.contentPreview}
+                        content={msg.content}
                         createdAt={msg.createdAt}
                         tokensIn={msg.tokensIn}
                         tokensOut={msg.tokensOut}
+                        persona={msg.personaName}
+                        model={msg.modelType}
                       />
                     ))}
                     <div ref={messagesEndRef} />
@@ -412,7 +307,7 @@ export default function MonitorPage() {
                 )}
               </div>
 
-              {/* 訊息分頁（有超過一頁時才顯示） */}
+              {/* 訊息分頁 */}
               {msgData && msgData.totalCount > msgData.pageSize && (
                 <div className="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-2 border-t border-slate-200 dark:border-zinc-800">
                   <span className="text-xs text-slate-400 dark:text-zinc-500">
@@ -450,9 +345,11 @@ type MonitorMessageBubbleProps = {
   createdAt: string
   tokensIn: number
   tokensOut: number
+  persona?: string | null
+  model?: string | null
 }
 
-function MonitorMessageBubble({ role, content, createdAt, tokensIn, tokensOut }: MonitorMessageBubbleProps) {
+function MonitorMessageBubble({ role, content, createdAt, tokensIn, tokensOut, persona, model }: MonitorMessageBubbleProps) {
   const isUser = role === 'user'
   const [copied, setCopied] = useState(false)
   const { push: toast } = useToast()
@@ -493,14 +390,25 @@ function MonitorMessageBubble({ role, content, createdAt, tokensIn, tokensOut }:
           )}
         </div>
 
-        {/* 時間 + Token 用量 + 複製按鈕（同一排，複製靠右） */}
+        {/* 時間 + Token 用量 + 複製按鈕 */}
         <div className={`flex items-center gap-2 px-1 w-full ${isUser ? 'flex-row-reverse' : ''}`}>
           <span className="text-xs text-slate-400 dark:text-zinc-500">
             {new Date(createdAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
           </span>
+          {/* 角色（每則訊息當下使用的角色，標在模型前） */}
+          {persona && (
+            <span className="text-xs text-violet-500 dark:text-violet-400 truncate max-w-[8rem]" title={persona}>
+              {persona}
+            </span>
+          )}
           {!isUser && tokensIn > 0 && (
             <span className="text-xs text-slate-400 dark:text-zinc-500 font-mono">
               ↑{tokensIn} ↓{tokensOut}
+            </span>
+          )}
+          {!isUser && shortModel(model) && (
+            <span className="text-xs text-slate-400 dark:text-zinc-500 font-mono truncate" title={model ?? undefined}>
+              {shortModel(model)}
             </span>
           )}
           <GhostButton onClick={handleCopy} title="複製訊息" className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">

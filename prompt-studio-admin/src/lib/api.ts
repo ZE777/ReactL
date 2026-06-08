@@ -6,6 +6,8 @@ import { emitToast } from './toastEmitter'
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 30000,
+  // 透過 ngrok 免費版發布時，跳過瀏覽器警告攔截頁（否則 API 會收到 HTML 而非 JSON）
+  headers: { 'ngrok-skip-browser-warning': 'true' },
 })
 
 /** 解包後端 ApiResponse<T> 包裝，取出 data 欄位 */
@@ -40,7 +42,8 @@ api.interceptors.response.use(
     const status = error.response.status
     const detail = error.response.data?.detail
 
-    if (status === 401 && window.location.pathname !== '/login') {
+    // 路徑可能帶 /admin 前綴（透過 ngrok 子路徑發布時），故用 endsWith 判斷
+    if (status === 401 && !window.location.pathname.endsWith('/login')) {
       localStorage.removeItem('token')
       localStorage.removeItem('expiresAt')
       window.dispatchEvent(new CustomEvent('auth:logout'))

@@ -20,6 +20,8 @@ export type Persona = {
   isBuiltin?: boolean
   userId?: string | null
   currentVersion?: number
+  /** 前台公開聊天使用此角色時的 AI 模型（格式 providerId:modelId） */
+  modelType?: string
 }
 
 export type SharedConversation = {

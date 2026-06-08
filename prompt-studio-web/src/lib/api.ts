@@ -20,6 +20,8 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
     signal,
     headers: {
       'Content-Type': 'application/json',
+      // 透過 ngrok 免費版發布時，跳過瀏覽器警告攔截頁（否則 API 會收到 HTML 而非 JSON）
+      'ngrok-skip-browser-warning': 'true',
       ...rest.headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -58,6 +60,8 @@ export async function fetchPublicPersonas() {
 export type PublicAccessStatus = {
   /** 本站是否要求存取碼 */
   requireAccessCode: boolean
+  /** 聊天記錄保留天數（逾期自動清除）；0 = 永久保留 */
+  logRetentionDays: number
   /** 提供的碼是否有效 */
   valid: boolean
   label: string | null
@@ -74,4 +78,18 @@ export async function fetchAccessStatus(code: string | null) {
     headers: code ? { 'X-Access-Code': code } : undefined,
   })
   return res.data
+}
+
+/**
+ * 取回前台訪客自己的歷史對話（指定角色）。
+ * 一人一碼：有存取碼以碼識別（跨裝置可見），否則退回 sessionId（同瀏覽器）。
+ */
+export async function fetchPublicChatHistory(personaId: string, code: string | null, sessionId: string) {
+  const headers: Record<string, string> = { 'X-Chat-Session': sessionId }
+  if (code) headers['X-Access-Code'] = code
+  const res = await api.get<{ data: { role: string; content: string; createdAt: string }[] }>(
+    `/public/chat/history?personaId=${encodeURIComponent(personaId)}`,
+    { cache: 'no-store', headers },
+  )
+  return res.data ?? []
 }
