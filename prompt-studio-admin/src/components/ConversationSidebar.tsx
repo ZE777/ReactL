@@ -160,9 +160,9 @@ export default function ConversationSidebar({ isOpen, onClose, locked = false }:
 
         {[
           ...setupNavItems,
-          // 存取碼僅管理員可見（邀請連結與存取權限管理）
-          ...(profile?.role === 'Admin' ? [{ label: '存取碼', path: '/access-codes' }] : []),
           ...monitorNavItems,
+          // 存取碼僅管理員可見（邀請連結與存取權限管理）；放在前台聊天監控上方
+          ...(profile?.role === 'Admin' ? [{ label: '存取碼', path: '/access-codes' }] : []),
           // 前台聊天監控僅管理員可見（公開聊天室訪客的對話記錄）
           ...(profile?.role === 'Admin' ? [{ label: '前台聊天監控', path: '/public-chat-monitor' }] : []),
         ].map(item => (
