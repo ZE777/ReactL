@@ -14,7 +14,8 @@ ReactL/
 │   ├── 前端實作準則/        # 9 份架構守則
 │   ├── 前端UIUX設計/        # 無障礙等設計文件
 │   ├── 需求規劃/           # Project C AI Prompt Studio 規劃
-│   └── 部署指南/           # Bot 串接、環境設定等操作文件
+│   ├── 部署指南/           # Bot 串接、環境設定等操作文件
+│   └── 前端實作細節.md      # 前台 + 後台完整實作層細節（routing / 資料層 / 狀態 / 設計系統）
 ├── skills/                # 9 個前端實作 Skills（表單、API、路由、樣式…）
 ├── workflows/             # FSD 模組建立、CI/CD、測試自動化等工作流
 ├── rules/                 # 編碼規範
@@ -38,7 +39,7 @@ ReactL/
 
 全端作品集專案 — 詳見 [`docs/需求規劃/AIPromptStudio規劃.md`](docs/需求規劃/AIPromptStudio規劃.md)。
 
-技術棧：
+整體技術棧：
 - **前台**：Next.js 16 App Router + RSC + Tailwind + Framer Motion
 - **後台**：Vite + React Router + Zustand + React Query（語意化 Design Token + 自建 UI 元件庫，含 Dark Mode）
 - **後端**：ASP.NET Core 8 + EF Core 8（Code-First；schema 以 SqlScripts 版本化腳本管理）+ JWT
@@ -47,6 +48,35 @@ ReactL/
 - **Discord AI 管理**：`/chat` 自然語言 → AI function calling → 後端執行 Discord 伺服器管理（23 個工具：禁言 / 踢人 / 封鎖 / 移動語音 / 身分組 / 批次刪訊息 / 查詢…）；中高風險動作有**二次確認按鈕**，並具下指令者權限檢查、Bot 階級防護、特權身分組防護與白名單制
 - **外部 Bot**：LINE Messaging API + Discord Interactions（Webhook）；Bot 憑證 AES 加密儲存、建立時自動驗證並標示有效性
 - **部署**：IIS（API + 後台靜態）+ PM2（前台 Next.js）
+
+### 技術應用概要
+
+> 技術選型 → **實際應用於本專案的什麼地方**。實作層細節見 [`docs/前端實作細節.md`](docs/前端實作細節.md)；後端見 [`ReactL.api`](https://github.com/ZE777/ReactL.api) repo 的 README 與 `workflows/`。
+
+#### 前台 `prompt-studio-web`（公開展示 + 訪客聊天）
+
+| 技術 | 在本專案的應用 |
+|------|---------------|
+| **Next.js 16（App Router）** | Landing / About / Share 走 Server Component（SSR + 動態 metadata）；聊天頁 `page.tsx` 以 `<Suspense>` 包 Client 的 `ChatClient`，子路徑 `/app`（`basePath`）、`output: standalone` 供 PM2 |
+| **React 19** | 聊天 UI 狀態以 hooks 就地管理（無全域狀態庫）|
+| **TypeScript 5** | `src/types` 定義 `Message` / `Persona` / `SharedConversation` 等 API 合約 |
+| **Tailwind CSS 4** | `@import "tailwindcss"` 單一入口、`@theme` 變數、class-based 深色模式 + `ThemeScript` 防閃白 |
+| **Framer Motion** | Landing 各 section 的捲動觸發淡入 / stagger 動畫 |
+| **fetch + ReadableStream** | `lib/api.ts` 包裝 fetch（10s timeout）；聊天以手動 SSE 解析串流 AI 回應，`AbortController` 支援「停止」|
+| **react-markdown + remark/rehype + KaTeX + Mermaid + highlight.js** | 聊天訊息渲染：GFM 表格、數學、Emoji、程式碼高亮、Mermaid 圖、裸 URL 轉影音嵌入；`rehype-sanitize` 白名單沙箱防 XSS |
+
+#### 後台 `prompt-studio-admin`（管理介面）
+
+| 技術 | 在本專案的應用 |
+|------|---------------|
+| **Vite 8 + React 19** | SPA 後台，子路徑 `/admin/`（`base`），`@tailwindcss/vite` 整合 |
+| **react-router-dom 7** | `createBrowserRouter` 路由樹；`PrivateRoute` token 守衛、`AdminLayout` 強制改密與「最小金鑰閘門」|
+| **axios** | `lib/api.ts` 實例 + 攔截器：注入 Bearer token、401 發 `auth:logout`、403/429/5xx 全域 Toast |
+| **@tanstack/react-query 5** | 對話 / 角色 / Prompt / 金鑰等伺服器狀態快取與去重（`retry:false`、`enabled` 條件查詢、mutation 失效）|
+| **Zustand 5** | `conversationStore` 持久化對話清單與 `activeId` 至 localStorage |
+| **react-hook-form 7** | 登入 / 角色 / Bot 等表單；`noSpace` 去空白工具、root vs 欄位錯誤分流 |
+| **Design Token + 自建 UI 元件庫** | `tokens/colors.ts` 語意色 + `components/ui` 20+ 元件（Button / Modal / Badge / DropdownSelect…），含深色模式 |
+| **react-markdown 同套堆疊** | 聊天測試與監控頁的訊息渲染，與前台一致 |
 
 ## 部署指南
 
