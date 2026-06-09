@@ -376,33 +376,35 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
         </div>
       </div>
 
-      {/* 公開設定 */}
-      <div className="flex items-center gap-4 py-4 border-b border-dashed border-slate-200/70 dark:border-zinc-700/25">
-        <div className="w-24 flex-shrink-0">
-          <p className="text-sm text-slate-600 dark:text-zinc-400">公開設定</p>
-        </div>
-        <div className="flex items-center justify-between flex-1">
-          <div>
-            <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">公開顯示於前台</p>
-            <p className="text-xs text-slate-400 dark:text-zinc-400 mt-0.5">啟用後此 Persona 可在前台頁面被選用</p>
+      {/* 公開設定：僅 Admin 可決定角色是否公開於前台；一般使用者的自訂角色一律不公開（與後端授權一致） */}
+      {isAdmin && (
+        <div className="flex items-center gap-4 py-4 border-b border-dashed border-slate-200/70 dark:border-zinc-700/25">
+          <div className="w-24 flex-shrink-0">
+            <p className="text-sm text-slate-600 dark:text-zinc-400">公開設定</p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isBuiltin}
-            onClick={() => setIsBuiltin(v => !v)}
-            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 ${
-              isBuiltin ? 'bg-violet-500' : 'bg-slate-200 dark:bg-zinc-600'
-            }`}
-          >
-            <span
-              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ${
-                isBuiltin ? 'translate-x-4' : 'translate-x-0'
+          <div className="flex items-center justify-between flex-1">
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">公開顯示於前台</p>
+              <p className="text-xs text-slate-400 dark:text-zinc-400 mt-0.5">啟用後此 Persona 可在前台頁面被選用</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isBuiltin}
+              onClick={() => setIsBuiltin(v => !v)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 ${
+                isBuiltin ? 'bg-violet-500' : 'bg-slate-200 dark:bg-zinc-600'
               }`}
-            />
-          </button>
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ${
+                  isBuiltin ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 前台模型：僅 Admin 可設定。此角色在前台公開聊天室使用的 AI 模型（後台聊天的模型由對話本身決定，不受此設定影響） */}
       {isAdmin && (

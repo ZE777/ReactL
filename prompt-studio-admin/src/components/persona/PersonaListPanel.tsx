@@ -127,7 +127,8 @@ function PersonaRow({ persona, isSelected, onSelect, isSystemBuiltin, isPendingD
               <p className={`text-sm font-medium truncate ${isSelected ? 'text-violet-600 dark:text-violet-300' : 'text-slate-700 dark:text-zinc-200'}`}>
                 {persona.name}
               </p>
-              {persona.isBuiltin && !isSystemBuiltin && (
+              {/* 公開於前台（isBuiltin）即顯示標籤，含系統內建；非公開的內建角色就不顯示 */}
+              {persona.isBuiltin && (
                 <Tag color="green" className="flex-shrink-0">公開</Tag>
               )}
             </div>
