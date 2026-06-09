@@ -752,9 +752,11 @@ type ModelSelectProps = {
   hasError?: boolean
   /** 限定可選的供應商（使用者自帶金鑰的 provider）；不給＝以系統 isConfigured 為準 */
   usableProviders?: Set<string>
+  /** 是否顯示 function-calling 的「推薦/非推薦」提示（僅 Discord 需要；LINE 無 function-calling） */
+  showToolRecommendation?: boolean
 }
 
-function ModelSelect({ value, onChange, providers, loading, hasError, usableProviders }: ModelSelectProps) {
+function ModelSelect({ value, onChange, providers, loading, hasError, usableProviders, showToolRecommendation }: ModelSelectProps) {
   const [open, setOpen] = useState(false)
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -785,7 +787,7 @@ function ModelSelect({ value, onChange, providers, loading, hasError, usableProv
     const provider = providers.find(p => p.id === providerId)
     const model = provider?.models.find(m => m.id === modelId)
     if (!provider || !model) return null
-    return { provider: provider.displayName, model: model.displayName }
+    return { provider: provider.displayName, model: model.displayName, recommended: !!model.recommendedForTools }
   }, [value, providers])
 
   const configuredProviders = providers?.filter(p => usableProviders ? usableProviders.has(p.id) : p.isConfigured) ?? []
@@ -849,7 +851,12 @@ function ModelSelect({ value, onChange, providers, loading, hasError, usableProv
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                       </svg>
                     </span>
-                    {model.displayName}
+                    <span className="truncate">{model.displayName}</span>
+                    {showToolRecommendation && model.recommendedForTools && (
+                      <span className="ml-auto flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        推薦
+                      </span>
+                    )}
                   </button>
                 )
               })}
@@ -859,6 +866,13 @@ function ModelSelect({ value, onChange, providers, loading, hasError, usableProv
             </div>
           ))}
         </div>
+      )}
+
+      {/* 選到非推薦模型時提示：function-calling 能力/額度可能導致非預期結果（僅 Discord） */}
+      {showToolRecommendation && selectedLabel && !selectedLabel.recommended && (
+        <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
+          ⚠️ 此模型未列為推薦，用於「找人/批次動作」等 function-calling 時可能因模型能力或免費額度限制出現非預期結果，建議改用標示「推薦」的模型。
+        </p>
       )}
     </div>
   )
@@ -1073,6 +1087,7 @@ function BotForm({ isEdit, personas, defaultValues, onSubmit, onDirtyChange, onV
                 loading={providersLoading}
                 hasError={!!errors.modelType}
                 usableProviders={usableProviders}
+                showToolRecommendation={platform === 'discord'}
               />
               {errors.modelType && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.modelType.message}</p>}
             </div>

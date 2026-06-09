@@ -4,6 +4,8 @@ export type AiModel = {
   id: string
   /** 顯示名稱 */
   displayName: string
+  /** 是否推薦用於 function-calling 場景（如 Discord agent 工具）；非推薦會在選單提示 */
+  recommendedForTools?: boolean
 }
 
 /** AI 供應商定義 */

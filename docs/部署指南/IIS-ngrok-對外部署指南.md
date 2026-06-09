@@ -394,6 +394,7 @@ ngrok service start
 | `/admin` 重整子頁 404 | dist 缺 SPA fallback web.config（應由 public\ 帶入） |
 | 邀請/分享連結指錯 | admin `VITE_PUBLIC_WEB_URL` 要含 `/app`（web 在 /app），改了要重 build admin |
 | ngrok 網址重開就變 | 啟動沒帶 `--url=固定網址` |
+| 經 ngrok 開網址回 `400 Bad Request - Invalid Hostname`（HTTP Error 400） | ngrok **直接指向 IIS Express（44345）** 而非 8000 站台。IIS Express 走 HTTP.sys，繫結只認 `localhost`，ngrok 轉來的主機名（`xxx.ngrok-free.dev`）被擋在 .NET 之前（後端 log 看不到任何請求）。解法見 §10：ngrok 加 `--host-header=rewrite`；或改指向繫結留空（萬用）的 IIS 8000 入口站台 |
 
 ---
 
@@ -403,3 +404,50 @@ ngrok service start
 - 後台：`http://localhost:5173/admin/`（Vite base `/admin/`）
 - 前台：`http://localhost:3000/app`（Next basePath `/app` 在 dev 也生效）
 - 後端：照舊 VS / IIS Express（44345）
+
+---
+
+## 10. 開發測試：ngrok 直接指向 IIS Express（44345）
+
+> 適用情境：**還沒發布到 IIS 8000 站台**，只想用 VS / IIS Express 跑著的後端（`https://localhost:44345`）
+> 快速對外測試 **Discord Interactions Webhook**（或 LINE webhook）。這是 §6 主流程（ngrok → 8000）之外的捷徑。
+
+### 為什麼直接指 44345 會 `400 Invalid Hostname`
+
+IIS Express 透過 **HTTP.sys** 註冊繫結，只接受 Host 為 `localhost` 的請求。ngrok 預設會把**原始 Host header**
+（`election-hangnail-reopen.ngrok-free.dev`）原樣轉給後端，HTTP.sys 一看不是 `localhost` → 直接回
+`400 Bad Request - Invalid Hostname`，**請求進不到 ASP.NET**（所以後端 log 連 `Discord Webhook 收到請求` 都不會出現，
+`appsettings.json` 的 `AllowedHosts:"*"` 也救不到——那是 .NET 層，但請求被擋在 .NET 之外）。
+
+> 對照：§6 主流程的 IIS 8000 站台「繫結主機名稱留空＝萬用繫結」，任何 Host 都收，所以不會有這問題。
+
+### 解法：讓 ngrok 改寫 Host 為 localhost
+
+```powershell
+ngrok http https://localhost:44345 --host-header=rewrite
+```
+
+`--host-header=rewrite` 會把轉發出去的 Host 改成上游 URL 的主機（`localhost:44345`），HTTP.sys 即放行。
+常駐設定檔（`%LOCALAPPDATA%\ngrok\ngrok.yml`）寫法：
+
+```yaml
+tunnels:
+  reactl-dev:
+    proto: http
+    addr: https://localhost:44345
+    host_header: rewrite          # 關鍵：改寫 Host 成 localhost，否則 IIS Express 回 400 Invalid Hostname
+    domain: election-hangnail-reopen.ngrok-free.dev
+```
+
+### 驗證
+
+```powershell
+# 經 ngrok 打健康檢查，回 Healthy(200) 代表 Host 問題已解
+curl https://election-hangnail-reopen.ngrok-free.dev/health
+```
+
+回 `Healthy` 後，再到 **Discord Developer Portal → Interactions Endpoint URL** 設成
+`https://<目前 ngrok 網址>/webhooks/discord/{botId}`，回 Discord 打 `/chat` 測。
+
+> ⚠️ ngrok free 每次重開**網址會變**（除非帶 `--url=`/`--domain=` 固定網址），變了就要回 Discord Portal 同步更新 Endpoint URL。
+> ⚠️ 正式對外仍建議走 §6 的 8000 入口站台（前台/後台/API/webhook 同一網址統一進）；本節只是 webhook 開發期的捷徑。
