@@ -442,6 +442,7 @@ function TrustListModal({ bot, onClose }: { bot: BotBinding | null; onClose: () 
   const [label, setLabel] = useState('')
   const [tier, setTier] = useState('')
   const [role, setRole] = useState<TrustSystemRole>('trusted')
+  const [editingId, setEditingId] = useState<string | null>(null)   // 非 null＝正在編輯既有成員（鎖住 ID 欄）
 
   const { data: trusted, isLoading } = useQuery<TrustedUser[]>({
     queryKey: ['trusted-users', botId],
@@ -461,9 +462,17 @@ function TrustListModal({ bot, onClose }: { bot: BotBinding | null; onClose: () 
       tier: tier.trim() || undefined,
       systemRole: role,
     }),
-    onSuccess: () => { invalidate(); setDiscordUserId(''); setLabel(''); setTier(''); setRole('trusted'); toast('success', '已更新成員') },
+    onSuccess: () => { invalidate(); setDiscordUserId(''); setLabel(''); setTier(''); setRole('trusted'); setEditingId(null); toast('success', '已更新成員') },
     onError: (e: AxiosError<ApiError>) => toast('error', e.response?.data?.detail ?? '加入失敗'),
   })
+
+  // 點現有成員 → 帶入表單編輯（沿用同 ID upsert）；取消則清空回到「新增」
+  const startEdit = (t: TrustedUser) => {
+    setEditingId(t.id); setDiscordUserId(t.id); setLabel(t.label ?? ''); setTier(t.tier ?? ''); setRole(t.systemRole)
+  }
+  const cancelEdit = () => {
+    setEditingId(null); setDiscordUserId(''); setLabel(''); setTier(''); setRole('trusted')
+  }
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => removeTrustedUser(botId, id),
@@ -492,12 +501,13 @@ function TrustListModal({ bot, onClose }: { bot: BotBinding | null; onClose: () 
 
         {/* 新增 / 更新成員 */}
         <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-4 space-y-3">
-          <p className="text-sm font-medium text-slate-600 dark:text-zinc-300">新增 / 更新成員</p>
+          <p className="text-sm font-medium text-slate-600 dark:text-zinc-300">{editingId ? '編輯成員' : '新增 / 更新成員'}</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 min-w-0">
-              <label className="block text-xs text-slate-400 dark:text-zinc-400 mb-1">Discord User ID <span className="text-red-400">*</span></label>
-              {/* 只留數字：貼上 Discord mention（<@id>、<@!id>、@id）時自動清成純 ID */}
+              <label className="block text-xs text-slate-400 dark:text-zinc-400 mb-1">Discord User ID <span className="text-red-400">*</span>{editingId && <span className="text-slate-400 dark:text-zinc-500 font-normal">（編輯時不可更改）</span>}</label>
+              {/* 只留數字：貼上 Discord mention（<@id>、<@!id>、@id）時自動清成純 ID。編輯既有成員時鎖住，避免改 ID 變成新增 */}
               <Input value={discordUserId} onChange={e => setDiscordUserId(e.target.value.replace(/\D/g, ''))} placeholder="000000000000000000"
+                disabled={!!editingId} className={editingId ? 'opacity-60 cursor-not-allowed' : ''}
                 error={discordUserId.trim() && !idValid ? '需為 17~20 位數字' : undefined} />
             </div>
             <div className="flex-1 min-w-0">
@@ -525,8 +535,9 @@ function TrustListModal({ bot, onClose }: { bot: BotBinding | null; onClose: () 
           <p className="text-xs text-slate-400 dark:text-zinc-500">
             「系統角色」決定權限：<b>管理者</b>可在 Discord 對話中維護名單（可多人）；<b>信任者</b>僅受信任。「關係」只是給角色語氣參考的自訂標籤。相同 ID 再次送出會更新該成員。
           </p>
-          <div className="flex justify-end">
-            <Button size="sm" loading={addMutation.isPending} disabled={!idValid} onClick={() => addMutation.mutate()}>儲存成員</Button>
+          <div className="flex justify-end gap-2">
+            {editingId && <Button size="sm" variant="ghost" onClick={cancelEdit}>取消</Button>}
+            <Button size="sm" loading={addMutation.isPending} disabled={!idValid} onClick={() => addMutation.mutate()}>{editingId ? '更新成員' : '儲存成員'}</Button>
           </div>
         </div>
 
@@ -552,6 +563,12 @@ function TrustListModal({ bot, onClose }: { bot: BotBinding | null; onClose: () 
                     </div>
                     <p className="text-xs text-slate-400 dark:text-zinc-500 font-mono truncate">{t.id}</p>
                   </div>
+                  <IconButton color="blue" title="編輯" aria-label="編輯"
+                    onClick={() => startEdit(t)}>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </IconButton>
                   <IconButton color="red" title="移除" aria-label="移除"
                     onClick={() => removeMutation.mutate(t.id)}>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
