@@ -318,6 +318,8 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
 
   // 新增模式：name >= 2 字 且三個必填 section 皆有內容
   const nameValue = useWatch({ control, name: 'name' })
+  // emoji 走 setValue，RHF 的 isDirty 不一定觸發重算，故顯式訂閱並比對（同 sections 模式）
+  const emojiValue = useWatch({ control, name: 'emoji' })
   const isCreateFormValid = !isEdit &&
     (nameValue?.trim().length ?? 0) >= 2 &&
     REQUIRED_SECTIONS.every(k => !!sections[k]?.trim())
@@ -328,8 +330,9 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
     const sectionsChanged = JSON.stringify(sections) !== JSON.stringify(persona!.promptSections ?? EMPTY_SECTIONS)
     const builtinChanged = isBuiltin !== (persona!.isBuiltin ?? false)
     const modelChanged = modelType !== (persona!.modelType ?? DEFAULT_MODEL)
-    return isDirty || sectionsChanged || builtinChanged || modelChanged
-  }, [isEdit, isDirty, sections, isBuiltin, modelType, persona])
+    const emojiChanged = (emojiValue ?? '') !== (persona!.emoji ?? '')
+    return isDirty || sectionsChanged || builtinChanged || modelChanged || emojiChanged
+  }, [isEdit, isDirty, emojiValue, sections, isBuiltin, modelType, persona])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-0">
@@ -356,7 +359,7 @@ export default function PersonaForm({ persona, onSuccess, hideHeader, onDiscard 
             <label className="block text-sm mb-1.5 invisible pointer-events-none select-none" aria-hidden="true">_</label>
             <EmojiPicker
               value={watch('emoji') ?? ''}
-              onChange={v => setValue('emoji', v)}
+              onChange={v => setValue('emoji', v, { shouldDirty: true })}
             />
           </div>
           <div className="flex-1">
