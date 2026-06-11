@@ -3,11 +3,12 @@ import { useForm, type UseFormReturn } from 'react-hook-form'
 import { useNoSpace } from '../lib/form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
-import type { BotBinding, BotFormData, BotPlatform } from '../types/bot'
+import type { BotBinding, BotFormData, BotPlatform, TrustedUser } from '../types/bot'
 import type { Persona } from '../types/persona'
 import type { AiProvider, AiKey } from '../types/ai'
 import type { ApiError, ApiResponse } from '../types/api'
-import { fetchBots } from '../api/bots'
+import { fetchBots, fetchTrustedUsers, addTrustedUser, removeTrustedUser } from '../api/bots'
+import type { TrustSystemRole } from '../types/bot'
 import { fetchPersonas } from '../api/personas'
 import { fetchAiKeys } from '../api/aiKeys'
 import api, { unwrap } from '../lib/api'
@@ -78,6 +79,7 @@ export default function BotsPage() {
 
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
   const [editingBot, setEditingBot] = useState<BotBinding | null>(null)
+  const [trustBot, setTrustBot] = useState<BotBinding | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [isFormDirty, setIsFormDirty] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
@@ -347,6 +349,7 @@ export default function BotsPage() {
                 isToggling={toggleMutation.isPending && toggleMutation.variables?.bot.id === bot.id}
                 onToggle={() => toggleMutation.mutate({ bot, isEnabled: !bot.isEnabled })}
                 onEdit={() => openEdit(bot)}
+                onManageTrust={() => setTrustBot(bot)}
                 onDeleteRequest={() => setPendingDeleteId(bot.id)}
                 onDeleteConfirm={() => deleteMutation.mutate(bot.id)}
                 onDeleteCancel={() => setPendingDeleteId(null)}
@@ -420,7 +423,148 @@ export default function BotsPage() {
         isMutating={createMutation.isPending}
         created={wizardCreated}
       />
+
+      {/* 信任名單管理（Discord 動態白名單）；key 隨 Bot 變更 → 切換時表單狀態歸零 */}
+      <TrustListModal key={trustBot?.id ?? 'none'} bot={trustBot} onClose={() => setTrustBot(null)} />
     </div>
+  )
+}
+
+// ─── TrustListModal（信任名單管理：後台路徑 CRUD）──────────────────────────────
+
+function TrustListModal({ bot, onClose }: { bot: BotBinding | null; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const { push: toast } = useToast()
+  const botId = bot?.id ?? ''
+
+  // 由父層以 key={bot.id} 控制，切換 Bot / 開關時整個元件重掛 → 表單狀態自然歸零（免 effect）
+  const [discordUserId, setDiscordUserId] = useState('')
+  const [label, setLabel] = useState('')
+  const [tier, setTier] = useState('')
+  const [role, setRole] = useState<TrustSystemRole>('trusted')
+
+  const { data: trusted, isLoading } = useQuery<TrustedUser[]>({
+    queryKey: ['trusted-users', botId],
+    queryFn: () => fetchTrustedUsers(botId),
+    enabled: !!bot,
+  })
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['trusted-users', botId] })
+    queryClient.invalidateQueries({ queryKey: ['bots'] })   // 更新卡片上的人數摘要
+  }
+
+  const addMutation = useMutation({
+    mutationFn: () => addTrustedUser(botId, {
+      discordUserId: discordUserId.trim(),
+      label: label.trim() || undefined,
+      tier: tier.trim() || undefined,
+      systemRole: role,
+    }),
+    onSuccess: () => { invalidate(); setDiscordUserId(''); setLabel(''); setTier(''); setRole('trusted'); toast('success', '已更新成員') },
+    onError: (e: AxiosError<ApiError>) => toast('error', e.response?.data?.detail ?? '加入失敗'),
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => removeTrustedUser(botId, id),
+    onSuccess: () => { invalidate(); toast('success', '已移出名單') },
+    onError: (e: AxiosError<ApiError>) => toast('error', e.response?.data?.detail ?? '移除失敗'),
+  })
+
+  const idValid = /^\d{17,20}$/.test(discordUserId.trim())
+  const ownerCount = trusted?.filter(t => t.systemRole === 'owner').length ?? 0
+
+  return (
+    <Modal
+      isOpen={bot !== null}
+      onClose={onClose}
+      title={`信任系統 — ${bot?.botName ?? ''}`}
+      size="lg"
+      footer={<Button variant="ghost" onClick={onClose}>關閉</Button>}
+    >
+      <div className="space-y-4">
+        {/* 沒有任何管理者時的提醒（對話路徑需至少一位管理者） */}
+        {!isLoading && ownerCount === 0 && (
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+            名單中尚無「管理者」。Discord 對話中由管理者「說一句就加入」需至少一位管理者；請在下方新增成員時把系統角色設為「管理者」。後台則隨時都能維護名單。
+          </div>
+        )}
+
+        {/* 新增 / 更新成員 */}
+        <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-4 space-y-3">
+          <p className="text-sm font-medium text-slate-600 dark:text-zinc-300">新增 / 更新成員</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 min-w-0">
+              <label className="block text-xs text-slate-400 dark:text-zinc-400 mb-1">Discord User ID <span className="text-red-400">*</span></label>
+              {/* 只留數字：貼上 Discord mention（<@id>、<@!id>、@id）時自動清成純 ID */}
+              <Input value={discordUserId} onChange={e => setDiscordUserId(e.target.value.replace(/\D/g, ''))} placeholder="000000000000000000"
+                error={discordUserId.trim() && !idValid ? '需為 17~20 位數字' : undefined} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <label className="block text-xs text-slate-400 dark:text-zinc-400 mb-1">名稱</label>
+              <Input value={label} onChange={e => setLabel(e.target.value)} placeholder="請輸入名稱" />
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 min-w-0">
+              <label className="block text-xs text-slate-400 dark:text-zinc-400 mb-1">關係（自訂標籤）</label>
+              <Input value={tier} onChange={e => setTier(e.target.value)} placeholder="例：朋友" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <label className="block text-xs text-slate-400 dark:text-zinc-400 mb-1">系統角色</label>
+              <DropdownSelect
+                value={role}
+                onChange={v => setRole(v as TrustSystemRole)}
+                options={[
+                  { value: 'trusted', label: '信任者' },
+                  { value: 'owner', label: '管理者（可維護名單）' },
+                ]}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 dark:text-zinc-500">
+            「系統角色」決定權限：<b>管理者</b>可在 Discord 對話中維護名單（可多人）；<b>信任者</b>僅受信任。「關係」只是給角色語氣參考的自訂標籤。相同 ID 再次送出會更新該成員。
+          </p>
+          <div className="flex justify-end">
+            <Button size="sm" loading={addMutation.isPending} disabled={!idValid} onClick={() => addMutation.mutate()}>儲存成員</Button>
+          </div>
+        </div>
+
+        {/* 名單列表 */}
+        <div>
+          <p className="text-sm font-medium text-slate-600 dark:text-zinc-300 mb-2">
+            目前成員{trusted ? `（${trusted.length} 人，管理者 ${ownerCount}）` : ''}
+          </p>
+          {isLoading ? (
+            <p className="text-sm text-slate-400 dark:text-zinc-500 py-4 text-center">載入中…</p>
+          ) : !trusted?.length ? (
+            <p className="text-sm text-slate-400 dark:text-zinc-500 py-6 text-center">名單目前是空的。</p>
+          ) : (
+            <ul className="divide-y divide-slate-100 dark:divide-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+              {trusted.map(t => (
+                <li key={t.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                      <span className="text-sm font-medium text-slate-700 dark:text-zinc-200 truncate">{t.label || t.id}</span>
+                      <Tag color={t.systemRole === 'owner' ? 'amber' : 'slate'}>{t.systemRole === 'owner' ? '管理者' : '信任者'}</Tag>
+                      {t.tier && <Tag color="violet">{t.tier}</Tag>}
+                      {t.grantedBy === 'admin' && <span className="text-xs text-slate-400 dark:text-zinc-500">後台加入</span>}
+                    </div>
+                    <p className="text-xs text-slate-400 dark:text-zinc-500 font-mono truncate">{t.id}</p>
+                  </div>
+                  <IconButton color="red" title="移除" aria-label="移除"
+                    onClick={() => removeMutation.mutate(t.id)}>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Modal>
   )
 }
 
@@ -644,12 +788,13 @@ type CardProps = {
   isToggling: boolean
   onToggle: () => void
   onEdit: () => void
+  onManageTrust: () => void
   onDeleteRequest: () => void
   onDeleteConfirm: () => void
   onDeleteCancel: () => void
 }
 
-function BotCard({ bot, isPendingDelete, isDeleting, isToggling, onToggle, onEdit, onDeleteRequest, onDeleteConfirm, onDeleteCancel }: CardProps) {
+function BotCard({ bot, isPendingDelete, isDeleting, isToggling, onToggle, onEdit, onManageTrust, onDeleteRequest, onDeleteConfirm, onDeleteCancel }: CardProps) {
   return (
     <div className={`bg-white dark:bg-zinc-900 border rounded-xl p-5 transition-colors ${
       isPendingDelete
@@ -724,7 +869,15 @@ function BotCard({ bot, isPendingDelete, isDeleting, isToggling, onToggle, onEdi
             <Button variant="secondary" size="sm" onClick={onDeleteCancel}>取消</Button>
           </div>
         ) : (
-          <div className="ml-auto flex gap-1.5">
+          <div className="ml-auto flex items-center gap-1.5">
+            {bot.platform === 'discord' && (
+              <IconButton color="violet" onClick={onManageTrust}
+                title={`信任系統（管理者 + 信任名單${bot.trustedUserCount > 0 ? `，${bot.trustedUserCount} 人` : ''}）`} aria-label="信任系統">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-2.83-4" />
+                </svg>
+              </IconButton>
+            )}
             <IconButton color="blue" onClick={onEdit} title="編輯" aria-label="編輯">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1219,7 +1372,7 @@ const wizardFlow: Record<BotPlatform, WizardStep[]> = {
     {
       title: '建立 Bot',
       isForm: true,
-      intro: '填入 Bot 名稱、選擇模型與 Persona，按「建立 Bot」（建立時會驗證憑證並自動註冊指令）。',
+      intro: '填入 Bot 名稱、選擇模型與 Persona，按「建立 Bot」（建立時會驗證憑證並自動註冊指令）。建立後可在卡片的「信任名單」設定管理者與名單。',
       fields: ['botName', 'model', 'persona', 'webhook'],
     },
     {
