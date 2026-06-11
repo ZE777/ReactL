@@ -569,7 +569,7 @@ export default function ChatClient() {
 
           {/* 輸入區 */}
           <div className="border-t border-slate-100 dark:border-zinc-800 p-3 sm:p-4 shrink-0">
-            <form onSubmit={handleSend} className="flex gap-2 items-end">
+            <form onSubmit={handleSend} className="flex gap-2 items-center">
               <div className="relative flex-1">
                 <textarea
                   ref={inputRef}
@@ -586,8 +586,7 @@ export default function ChatClient() {
                         : `傳訊息給 ${selectedPersona.name}…`
                   }
                   disabled={!selectedPersona || isStreaming}
-                  className="w-full resize-none px-4 py-2.5 text-sm bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-700 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all max-h-32 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ minHeight: '42px' }}
+                  className="block w-full resize-none h-[42px] px-4 py-2.5 text-sm leading-5 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-700 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {/* 字數計數器 */}
                 {showCount && !isStreaming && (
@@ -608,7 +607,7 @@ export default function ChatClient() {
                 <button
                   type="button"
                   onClick={handleStop}
-                  className="px-4 py-2.5 text-sm font-medium rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors shrink-0 flex items-center gap-1.5"
+                  className="px-4 h-[42px] text-sm font-medium rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors shrink-0 flex items-center justify-center gap-1.5"
                   aria-label="停止生成"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -621,7 +620,7 @@ export default function ChatClient() {
                 <button
                   type="submit"
                   disabled={!input.trim() || !selectedPersona || input.length > MAX_INPUT_LENGTH}
-                  className="px-4 py-2.5 text-sm font-medium rounded-xl bg-violet-500 hover:bg-violet-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  className="px-4 h-[42px] flex items-center justify-center text-sm font-medium rounded-xl bg-violet-500 hover:bg-violet-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 >
                   送出
                 </button>
