@@ -416,7 +416,9 @@ TokenUsageStats (
 |------|------|
 | Line Bot 整合 | Webhook + 回覆 |
 | Discord Bot 整合 | Webhook + 回覆 |
-| Bot 綁定管理頁 | 後台 `/bots` |
+| Discord AI 管理（function calling）| `/chat` 自然語言指揮 Bot 執行伺服器管理動作（禁言、踢人、查詢…），白名單工具 + 二次確認（後續擴充，見後端 `discord-bot-function-calling-design.md`）|
+| Discord 信任系統 | 角色依發話者身分（主人／信任者／一般使用者）切換語氣；統一成員名單，每筆帶「系統角色」（主人可多位、code 層把關）與自訂「關係」標籤；prompt 只給身分事實、語氣交角色設定。後台或對話均可動態維護（V012）|
+| Bot 綁定管理頁 | 後台 `/bots`（含信任系統管理）|
 | 外部對話監控頁 | 後台 `/monitor` |
 | 前台聊天室 | Next.js 外部使用者介面 |
 | 公開分享頁 | SSR + SEO |

@@ -224,7 +224,7 @@ Copy-Item ".env.local"        -Destination "$dest\.env.local" -Force
 
 ```powershell
 npm install -g pm2     # 沒裝過才需要
-pm2 start "C:\app\ReactL_Web\server.js" --name ps-web    # standalone server，預設 3000；因 basePath 服務在 /app
+pm2 start "C:\app\ReactL_Web\server.js" --name ReactL_Web    # standalone server，預設 3000；因 basePath 服務在 /app
 pm2 save
 ```
 
@@ -376,6 +376,69 @@ ngrok service start
 | 7 | 前台送一則聊天 | API 不撞警告頁、SSE 串流逐字出現 |
 
 > 對外入口：訪客用 `.../app`（前台）、`.../admin`（後台）。裸網址根目錄打到後端，無頁面屬正常。
+
+---
+
+## 7.5 更新／重新部署（站台已建好後改版上線）
+
+> 首次建站見 §3–§6；本節是「之後改了程式碼要更新線上版」的流程。重點：**不需系統管理員權限**也能換版
+> （後端用 `app_offline.htm` 放開 DLL 鎖，取代「停 App Pool」）。建議先 build 到 staging、再快速換上線，降低中斷。
+
+### 7.5-1 後端 API（改了 .NET 程式）
+
+```powershell
+# ① 先發布到 staging（線上不受影響）
+dotnet publish "C:\source\ReactL.api\ReactL.api\ReactL.api\ReactL.api.csproj" -c Release -o "C:\app\_stage_api"
+# ② app_offline 放開 ReactL.api.dll 的鎖（ASP.NET Core Module 會優雅卸載 App）
+Set-Content "C:\app\ReactL.api\app_offline.htm" "<html><body>Updating…</body></html>"
+try { Invoke-WebRequest http://localhost:8000/ -UseBasicParsing -TimeoutSec 5 | Out-Null } catch {}
+Start-Sleep -Seconds 3
+# ③ 複製 staging → live，再移除 app_offline → 後端自動重啟
+Copy-Item "C:\app\_stage_api\*" -Destination "C:\app\ReactL.api" -Recurse -Force
+Remove-Item "C:\app\ReactL.api\app_offline.htm" -Force
+# ④ 驗證（401=授權管線正常；公開端點回 200）
+curl http://localhost:8000/api/v1/public/personas
+```
+
+> ⚠️ **動到資料表結構時（SqlScripts 有新 Vnnn）**：**先在後端連的那顆 DB 跑該 migration，再換後端**。
+> 否則新後端查到不存在的欄位會讓相關頁面直接 500（例如 `BotBindings` 多欄時 Bot 管理頁全壞）。
+> 生產 secrets 放在 `appsettings.Production.json`（隨 publish 帶上）或機器環境變數；publish 不會清掉環境變數。
+
+### 7.5-2 後台 admin（改了 Vite 前端）
+
+```powershell
+cd C:\source\ReactL\prompt-studio-admin
+npx tsc -b                                                   # 型別檢查（會擋 build）
+npx vite build --outDir "C:\app\_stage_admin" --emptyOutDir  # 先 build 到 staging
+Copy-Item "C:\app\_stage_admin\*" -Destination "C:\app\ReactL_Admin" -Recurse -Force   # 靜態檔，覆蓋即可
+# 驗證
+curl http://localhost:8000/admin            # 200
+```
+
+> 改了 `VITE_*`（如 `VITE_PUBLIC_WEB_URL`）要重 build，值會烤進靜態檔。瀏覽器看舊版請 Ctrl+F5（SPA 快取）。
+
+### 7.5-3 前台 web（改了 Next 前端）
+
+pm2 程序名為 **`ReactL_Web`**（`pm2 list` 可查）。Next standalone 換版要先停 pm2 釋放檔案鎖：
+
+```powershell
+cd C:\source\ReactL\prompt-studio-web
+npm run build
+$dest = "C:\app\ReactL_Web"
+pm2 stop ReactL_Web
+Start-Sleep -Milliseconds 800
+Remove-Item $dest -Recurse -Force; New-Item -ItemType Directory -Force $dest | Out-Null
+Copy-Item ".next\standalone\*" -Destination $dest -Recurse -Force
+Copy-Item "public"            -Destination $dest -Recurse -Force
+Copy-Item ".next\static"      -Destination "$dest\.next" -Recurse -Force
+Copy-Item ".env.local"        -Destination "$dest\.env.local" -Force   # 確認是 ngrok 那組
+pm2 restart ReactL_Web; pm2 save
+# 驗證（有 /app 前綴）
+curl http://localhost:3000/app/chat         # 200
+```
+
+> ⚠️ 部分受管環境的 PowerShell 對 `C:\app` 有「刪除防護」，`robocopy /MIR`、`Remove-Item` 可能被擋；
+> 改用**不刪除的 `Copy-Item -Force` 覆蓋**即可（殘留的舊 hash 檔無害，不被新 `index.html` 參照）。
 
 ---
 
